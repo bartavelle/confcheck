@@ -47,7 +47,7 @@ import Text.Read (readMaybe)
 
 import Data.Parsers.Xml
 import Data.Condition
-import Analyzis.Types
+import Analysis.Types
 
 newtype ObjectId = ObjectId T.Text
                    deriving (Show, Eq, Hashable)

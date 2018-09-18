@@ -1,4 +1,4 @@
-module Analyzis.Files.Conditions2 where
+module Analysis.Files.Conditions2 where
 
 import qualified Data.HashSet as HS
 import Control.Lens
@@ -22,10 +22,10 @@ import Data.Maybe (fromMaybe)
 import Control.Monad.State.Strict
 import Data.Monoid
 
-import Analyzis.Types
-import Analyzis.Files.Conditions
+import Analysis.Types
+import Analysis.Files.Conditions
 import Data.Condition
-import Analyzis.Common
+import Analysis.Common
 
 data FileTree = Leaf !UnixFileParse
               | Dir !UnixFileParse !(M.Map FP FileTree)

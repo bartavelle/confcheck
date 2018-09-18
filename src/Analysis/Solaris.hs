@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RankNTypes #-}
-module Analyzis.Solaris (
+module Analysis.Solaris (
     anaShowRev
   , anaPkgInfo
   , loadPatchDiag
-  , postSolarisAnalyzis
+  , postSolarisAnalysis
   , PatchInfo
   , patchIdent
   , patchDate
@@ -14,8 +14,8 @@ module Analyzis.Solaris (
   , patchRequires
   ) where
 
-import Analyzis.Common
-import Analyzis.Types
+import Analysis.Common
+import Analysis.Types
 
 import Prelude
 import Data.Text (Text)
@@ -153,7 +153,7 @@ loadPatchDiag = fmap (mapMaybe parseLine . T.lines) . T.readFile
                                                       apkgs
                                                       incomp
                                                       psyn
-                              _ -> error ("Analyzis.Solaris.parseLine: " <> show l)
+                              _ -> error ("Analysis.Solaris.parseLine: " <> show l)
 
 data PackageIdKey = Pkg T.Text
                   | Ver T.Text
@@ -225,8 +225,8 @@ missingPatches diag showrev pkgs = fmap (Vulnerability High) (notuptodate <> pac
                          | Obsolete `S.member` s = False
                          | otherwise = Security `S.member` s
 
-postSolarisAnalyzis :: Once [PatchInfo] -> Seq ConfigInfo -> IO (Seq Vulnerability)
-postSolarisAnalyzis opi ci =
+postSolarisAnalysis :: Once [PatchInfo] -> Seq ConfigInfo -> IO (Seq Vulnerability)
+postSolarisAnalysis opi ci =
     let sp = ci ^.. folded . _SolPatch
         pk = ci ^.. folded . _SoftwarePackage
     in  if null pk

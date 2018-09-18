@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Analyzis.Netstat (anaNetstat, parseNetstatNA, parseNetstatNAP) where
+module Analysis.Netstat (anaNetstat, parseNetstatNA, parseNetstatNAP) where
 
-import Analyzis.Types
-import Analyzis.Parsers
-import Analyzis.Common
+import Analysis.Types
+import Analysis.Parsers
+import Analysis.Common
 
 import Data.Sequence (Seq)
 import Data.Text (Text)

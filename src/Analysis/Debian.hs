@@ -5,13 +5,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
-module Analyzis.Debian (listDebs, DebInfo, postDebAnalyzis, loadDebVulns, loadSerializedCVE) where
+module Analysis.Debian (listDebs, DebInfo, postDebAnalysis, loadDebVulns, loadSerializedCVE) where
 
 import Prelude
-import Analyzis.Common
-import Analyzis.Types
-import Analyzis.Parsers
-import Analyzis.Oval (ovalRuleMatchedDEB)
+import Analysis.Common
+import Analysis.Types
+import Analysis.Parsers
+import Analysis.Oval (ovalRuleMatchedDEB)
 import Data.Oval
 
 import Text.Parser.Token
@@ -103,16 +103,16 @@ runOvalAnalyze uv arch sourcemap (ovs, tests) = do
       Nothing -> return $ Vulnerability sev $ OutdatedPackage pkg "zozo" (vshow correctver) day (Just (t <> "\n" <> d))
       Just vulnver -> return $ Vulnerability sev $ OutdatedPackage pkg (vshow vulnver) (vshow correctver) day (Just (t <> "\n" <> d))
 
-postDebAnalyzis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
+postDebAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
                 -> Once (Either CError DebInfo)
                 -> Seq ConfigInfo
                 -> IO (Seq Vulnerability)
-postDebAnalyzis oval info ce = do
+postDebAnalysis oval info ce = do
     let tolst (Left rr) = [ConfigInformation (ConfigError rr)]
         tolst (Right x) = analyzis x
         ve = extractVersion ce
         analyzis (DebInfo mp) = case ve of
-                                    Just (UnixVersion Debian (n:_)) -> concatMap (runAnalyzis mp (fromIntegral n)) (getDebs ce)
+                                    Just (UnixVersion Debian (n:_)) -> concatMap (runAnalysis mp (fromIntegral n)) (getDebs ce)
                                     _ -> []
     deb <- Seq.fromList . tolst <$> getOnce info
     ovl <- maybe (pure mempty) (\(v, arch, ov) -> runOvalAnalyze v arch (mkdebmap ce) <$> getOnce ov) $ do
@@ -124,11 +124,11 @@ postDebAnalyzis oval info ce = do
 
 
 -- | This analysis is using the old debian-security data from CVS
-runAnalyzis :: HM.HashMap (DebRelease, Text) [DebianPatch]
+runAnalysis :: HM.HashMap (DebRelease, Text) [DebianPatch]
             -> DebRelease
             -> (Text, Text, Maybe Text, DebianVersion)
             -> [Vulnerability]
-runAnalyzis mp release (package, sourcepackage, _, packageversion) = do
+runAnalysis mp release (package, sourcepackage, _, packageversion) = do
     DebianPatch dsaname day cves fixedversion sev <- mp ^.. ix (release, sourcepackage) . folded
     let mkvuln v = pure $ Vulnerability sev (OutdatedPackage package (showver packageversion) v day (Just desc))
         desc = T.intercalate " " (dsaname : map showcve cves)

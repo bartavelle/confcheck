@@ -1,11 +1,11 @@
 module Main where
 
-import Analyzis
-import Analyzis.Types
-import Analyzis.Oval
-import Analyzis.Solaris
-import Analyzis.Debian
-import Analyzis.Common
+import Analysis
+import Analysis.Types
+import Analysis.Oval
+import Analysis.Solaris
+import Analysis.Debian
+import Analysis.Common
 import Data.Microsoft
 
 import Debug.Trace

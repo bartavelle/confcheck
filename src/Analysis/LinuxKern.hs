@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Analyzis.LinuxKern (anaKernel) where
+module Analysis.LinuxKern (anaKernel) where
 
-import Analyzis.Types
-import Analyzis.Common
+import Analysis.Types
+import Analysis.Common
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)

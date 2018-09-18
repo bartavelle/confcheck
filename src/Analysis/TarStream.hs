@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module Analyzis.TarStream (analyzeTar, analyzeTarGz, tarAnalyzer) where
+module Analysis.TarStream (analyzeTar, analyzeTarGz, tarAnalyzer) where
 
 import Data.Conduit
 import qualified Data.Conduit.List      as CL

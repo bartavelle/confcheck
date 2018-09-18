@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Analyzis.Cron (anaCrontab, anaUsercrontab) where
+module Analysis.Cron (anaCrontab, anaUsercrontab) where
 
-import Analyzis.Types
-import Analyzis.Common
-import Analyzis.Parsers
-import Analyzis.Shell
+import Analysis.Types
+import Analysis.Common
+import Analysis.Parsers
+import Analysis.Shell
 
 import Text.Parsec.Error (ParseError)
 import Text.Parsec.Text

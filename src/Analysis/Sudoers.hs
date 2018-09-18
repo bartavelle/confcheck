@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Analyzis.Sudoers (anasudo, isUserMatching, testCommand, extractCommands, commandMatch, checkUserCondition, parseCnt, extractSudoconfig, distributeEither) where
+module Analysis.Sudoers (anasudo, isUserMatching, testCommand, extractCommands, commandMatch, checkUserCondition, parseCnt, extractSudoconfig, distributeEither) where
 
 
 import qualified Data.List.NonEmpty as NE
@@ -13,9 +13,9 @@ import Data.Text (Text)
 import Data.Sequence (Seq)
 import Network.IP.Addr
 
-import Analyzis.Types
-import Analyzis.Parsers
-import Analyzis.Common
+import Analysis.Types
+import Analysis.Parsers
+import Analysis.Common
 import Data.Condition
 
 import Text.Parsec.Text

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-module Analyzis.Passwd (analyzePasswdfile, analyzeUnixUsers) where
+module Analysis.Passwd (analyzePasswdfile, analyzeUnixUsers) where
 
 import Prelude
 import qualified Data.Text as T
@@ -17,16 +17,16 @@ import Data.Sequence.Lens
 import qualified Data.Sequence as Seq
 import qualified Data.Foldable as F
 
-import Analyzis.Common
-import Analyzis.Types
-import Analyzis.Sudoers
+import Analysis.Common
+import Analysis.Types
+import Analysis.Sudoers
 
 import Data.Common (regroupMap)
 
 r :: T.Text -> Int
 r x = case T.decimal x of
           Right (n, "") -> n
-          _ -> error ("Analyzis.Passwd: could not parse int: " <> show x)
+          _ -> error ("Analysis.Passwd: could not parse int: " <> show x)
 
 parseValidShells :: T.Text -> [ConfigInfo]
 parseValidShells = pure . ValidShells . S.fromList . filter (not . T.isPrefixOf "#") . map T.strip . T.lines

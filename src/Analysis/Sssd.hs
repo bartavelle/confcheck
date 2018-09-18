@@ -1,7 +1,7 @@
-module Analyzis.Sssd (anaSssd) where
+module Analysis.Sssd (anaSssd) where
 
-import Analyzis.Types
-import Analyzis.Common
+import Analysis.Types
+import Analysis.Common
 import Data.Serialize.Tdb
 import Control.Dependency
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Analyzis.Shell (toCommands) where
+module Analysis.Shell (toCommands) where
 
 
 import ShellCheck.Parser

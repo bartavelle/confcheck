@@ -48,3 +48,11 @@ cd ..
 ```
 .stack-work/install/x86_64-linux/lts-10.6/8.2.2/bin/confcheck-exe [cvs] [path to files]
 ```
+
+## FAQ
+
+### I do not know what this is about!
+
+:(
+
+

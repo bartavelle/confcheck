@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Analyzis.DebianJson where
+module Analysis.DebianJson where
 
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM

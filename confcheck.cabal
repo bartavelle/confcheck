@@ -19,28 +19,28 @@ library
   ghc-prof-options:    -auto-all -caf-all
   default-extensions:  OverloadedStrings
   exposed-modules:
-    Analyzis
-    Analyzis.ConnectToApp
-    Analyzis.Cron
-    Analyzis.Debian
-    Analyzis.DebianJson
-    Analyzis.Files
-    Analyzis.Files.Conditions
-    Analyzis.Ifconfig
-    Analyzis.LinuxKern
-    Analyzis.Netstat
-    Analyzis.Oval
-    Analyzis.Parsers
-    Analyzis.Passwd
-    Analyzis.Rhosts
-    Analyzis.RPM
-    Analyzis.Shell
-    Analyzis.Solaris
-    Analyzis.Sssd
-    Analyzis.Sudoers
-    Analyzis.Sysctl
-    Analyzis.TarStream
-    Analyzis.WindowsAudit
+    Analysis
+    Analysis.ConnectToApp
+    Analysis.Cron
+    Analysis.Debian
+    Analysis.DebianJson
+    Analysis.Files
+    Analysis.Files.Conditions
+    Analysis.Ifconfig
+    Analysis.LinuxKern
+    Analysis.Netstat
+    Analysis.Oval
+    Analysis.Parsers
+    Analysis.Passwd
+    Analysis.Rhosts
+    Analysis.RPM
+    Analysis.Shell
+    Analysis.Solaris
+    Analysis.Sssd
+    Analysis.Sudoers
+    Analysis.Sysctl
+    Analysis.TarStream
+    Analysis.WindowsAudit
     Data.Common
     Data.DebianVersion
     Data.Microsoft

@@ -4,7 +4,7 @@ module Main where
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import qualified Analyzis.Parsers as P
+import qualified Analysis.Parsers as P
 
 import qualified Text.Parsec.Prim as P
 

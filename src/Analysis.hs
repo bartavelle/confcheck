@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Analyzis ( RegroupedVulnerability(..)
+module Analysis ( RegroupedVulnerability(..)
                 , PackageUniqInfo(..)
                 , FicheInfo(..)
                 , Deadline(..)
@@ -11,7 +11,7 @@ module Analyzis ( RegroupedVulnerability(..)
                 , packageInfoToList
                 , configExtract
                 , regroupvulns
-                , postAnalyzis
+                , postAnalysis
                 , analyzeFile
                 , analyzeStream
                 , ficheData
@@ -21,25 +21,25 @@ module Analyzis ( RegroupedVulnerability(..)
                 ) where
 
 import Data.Oval
-import Analyzis.Types
-import Analyzis.ConnectToApp (buildNetApps)
-import Analyzis.Fiche
-import Analyzis.Common
-import Analyzis.Passwd
-import Analyzis.LinuxKern
-import Analyzis.RPM
-import Analyzis.Debian (DebInfo, postDebAnalyzis, listDebs)
-import Analyzis.Solaris
-import Analyzis.Files
-import Analyzis.Cron
-import Analyzis.TarStream
-import Analyzis.Netstat
-import Analyzis.Sudoers
-import Analyzis.Ifconfig
-import Analyzis.Sssd
-import Analyzis.Sysctl
-import Analyzis.Rhosts
-import Analyzis.WindowsAudit
+import Analysis.Types
+import Analysis.ConnectToApp (buildNetApps)
+import Analysis.Fiche
+import Analysis.Common
+import Analysis.Passwd
+import Analysis.LinuxKern
+import Analysis.RPM
+import Analysis.Debian (DebInfo, postDebAnalysis, listDebs)
+import Analysis.Solaris
+import Analysis.Files
+import Analysis.Cron
+import Analysis.TarStream
+import Analysis.Netstat
+import Analysis.Sudoers
+import Analysis.Ifconfig
+import Analysis.Sssd
+import Analysis.Sysctl
+import Analysis.Rhosts
+import Analysis.WindowsAudit
 import Data.Microsoft
 import Data.PrismFilter
 
@@ -188,8 +188,8 @@ getHostname = Seq.singleton . Hostname <$> (requireTxtS "etc/hostname" <|> requi
                             _ -> mempty
                             -- head . map (head . tail) . filter ( (== "HOSTNAME") . head ) . map (T.splitOn "=") . T.lines
 
-postAnalyzis :: Seq Vulnerability -> Seq Vulnerability
-postAnalyzis allvulns = ifoldMapOf itraversed dispatch regrouped
+postAnalysis :: Seq Vulnerability -> Seq Vulnerability
+postAnalysis allvulns = ifoldMapOf itraversed dispatch regrouped
     where
        regrouped = regroupVulnByType allvulns
        dispatch :: VulnGroup -> Seq Vulnerability -> Seq Vulnerability
@@ -203,17 +203,17 @@ analyzeMisc lst = lst <> wrongSysctl sysctls
     where
         sysctls = lst ^.. folded . _ConfigInformation . _Sysctl
 
-postTarAnalyzis :: (UnixVersion
+postTarAnalysis :: (UnixVersion
                 -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
                 -> Once (Either CError DebInfo)
                 -> Once [PatchInfo]
                 -> Seq ConfigInfo
                 -> IO (Seq Vulnerability)
-postTarAnalyzis dispatchoval dispatchdebs xdiag cinfo = do
-      rpmvulns <- postRPMAnalyzis dispatchoval cinfo
-      debvulns <- postDebAnalyzis dispatchoval dispatchdebs cinfo
-      solvulns <- postSolarisAnalyzis xdiag cinfo
-      return $ postAnalyzis (fmap ConfigInformation cinfo <> rpmvulns <> solvulns <> debvulns)
+postTarAnalysis dispatchoval dispatchdebs xdiag cinfo = do
+      rpmvulns <- postRPMAnalysis dispatchoval cinfo
+      debvulns <- postDebAnalysis dispatchoval dispatchdebs cinfo
+      solvulns <- postSolarisAnalysis xdiag cinfo
+      return $ postAnalysis (fmap ConfigInformation cinfo <> rpmvulns <> solvulns <> debvulns)
 
 analyzeFile :: (Monad m, MonadIO m)
             => AuditFileType
@@ -224,7 +224,7 @@ analyzeFile :: (Monad m, MonadIO m)
             -> FilePath
             -> m (Seq Vulnerability)
 analyzeFile tp xdiag dispatchoval dispatchdebs okbd fileLocation =
-    let posta = postTarAnalyzis dispatchoval dispatchdebs xdiag
+    let posta = postTarAnalysis dispatchoval dispatchdebs xdiag
     in  liftIO $ case tp of
                  AuditTarGz   -> runResourceT (analyzeTarGz configExtract fileLocation) >>= posta
                  AuditTar     -> runResourceT (analyzeTar   configExtract fileLocation) >>= posta
@@ -242,7 +242,7 @@ analyzeStream :: AuditFileType
               -> BSL.ByteString
               -> IO (Seq Vulnerability)
 analyzeStream tp xdiag dispatchoval dispatchdebs okbd fileLocation content =
-    let posta = postTarAnalyzis dispatchoval dispatchdebs xdiag
+    let posta = postTarAnalysis dispatchoval dispatchdebs xdiag
     in  case tp of
           AuditTar     -> runResourceT (CL.sourceList (BSL.toChunks content) =$ tarAnalyzer configExtract $$ CL.foldMap id) >>= posta
           AuditTarGz   -> runResourceT (CL.sourceList (BSL.toChunks content) =$ CZ.ungzip =$ tarAnalyzer configExtract $$ CL.foldMap id) >>= posta

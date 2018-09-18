@@ -3,7 +3,7 @@
 {-# LANGUAGE TupleSections #-}
 -- https://www.redhat.com/security/data/metrics/
 
-module Analyzis.Oval where
+module Analysis.Oval where
 
 import Prelude
 import qualified Data.Text as T
@@ -25,8 +25,8 @@ import Data.DebianVersion
 
 import Data.Condition
 import Data.Oval
-import Analyzis.Common
-import Analyzis.Types
+import Analysis.Common
+import Analysis.Types
 
 epoch :: Day
 epoch = fromGregorian 1970 1 1

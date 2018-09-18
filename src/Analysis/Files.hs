@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE BangPatterns #-}
-module Analyzis.Files (anaFilesNG, anaFilesOld, analyzeFS, normalFilepath, lineOld, lineNG', nhe, getParent, parseOldPerms) where
+module Analysis.Files (anaFilesNG, anaFilesOld, analyzeFS, normalFilepath, lineOld, lineNG', nhe, getParent, parseOldPerms) where
 
 import qualified Data.Foldable as F
 import Control.Lens
@@ -28,10 +28,10 @@ import Data.Word (Word8)
 
 import ByteString.Parser.Fast
 import qualified ByteString.Parser.Fast as F
-import Analyzis.Types
-import Analyzis.Common
-import Analyzis.Sudoers
-import Analyzis.Files.Conditions
+import Analysis.Types
+import Analysis.Common
+import Analysis.Sudoers
+import Analysis.Files.Conditions
 import Data.Condition
 import Data.Parsers.Atto (englishMonthToInt)
 

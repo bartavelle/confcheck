@@ -1,8 +1,8 @@
 {-# LANGUAGE RankNTypes #-}
-module Analyzis.Parsers (parseInt, parseDateYMD, parseTimeMs, lx, parseUnixUser, parseToConfigInfoMT, parseEnglishMonth, parseToConfigInfoND, parseErrorToConfigInfo, parseErrorToCError, hexValue) where
+module Analysis.Parsers (parseInt, parseDateYMD, parseTimeMs, lx, parseUnixUser, parseToConfigInfoMT, parseEnglishMonth, parseToConfigInfoND, parseErrorToConfigInfo, parseErrorToCError, hexValue) where
 
 import Prelude
-import Analyzis.Types
+import Analysis.Types
 import Text.Parsec.Combinator
 import Text.Parsec.Char
 import Text.Parsec.Text

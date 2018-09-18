@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Analyzis.Files.Conditions where
+module Analysis.Files.Conditions where
 
 
 import qualified Data.HashSet as HS
@@ -24,9 +24,9 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid
 import Data.Word (Word8)
 
-import Analyzis.Types
+import Analysis.Types
 import Data.Condition
-import Analyzis.Common
+import Analysis.Common
 
 type UnixFileParse = UnixFileGen BS.ByteString FP
 type FP = BS.ByteString

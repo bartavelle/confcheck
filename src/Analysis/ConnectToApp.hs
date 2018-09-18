@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
-module Analyzis.ConnectToApp where
--- module Analyzis.ConnectToApp (buildNetApps) where
+module Analysis.ConnectToApp where
+-- module Analysis.ConnectToApp (buildNetApps) where
 
 import           Control.Lens
 import           Data.Either (partitionEithers)
@@ -14,8 +14,8 @@ import qualified Data.Text as T
 import           Data.Textual (toText)
 import           Network.IP.Addr
 
-import Analyzis.Types
-import Analyzis.Fiche
+import Analysis.Types
+import Analysis.Fiche
 
 data PT = PTCP | PUDP
         deriving (Show, Eq, Ord)

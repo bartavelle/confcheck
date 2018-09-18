@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
-module Analyzis.RPM (listRPMs, postRPMAnalyzis, runAnalyze) where
+module Analysis.RPM (listRPMs, postRPMAnalysis, runAnalyze) where
 
 
 import Data.Oval
-import Analyzis.Types
-import Analyzis.Oval
-import Analyzis.Common
+import Analysis.Types
+import Analysis.Oval
+import Analysis.Common
 
 import Control.Lens
 import qualified Data.Text as T
@@ -47,8 +47,8 @@ mkrpmmap = M.fromList . toListOf (folded . _SoftwarePackage . to mrpm . folded)
         mrpm (Package p v PRPM) = Just (p, parseRPMVersion (T.unpack v))
         mrpm _ = Nothing
 
-postRPMAnalyzis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest))) -> Seq ConfigInfo -> IO (Seq Vulnerability)
-postRPMAnalyzis ovaldispatch ce =
+postRPMAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest))) -> Seq ConfigInfo -> IO (Seq Vulnerability)
+postRPMAnalysis ovaldispatch ce =
     case (,) <$> extractVersion ce <*> extractArch ce of
         Just (v, arch) ->
           case ovaldispatch v of

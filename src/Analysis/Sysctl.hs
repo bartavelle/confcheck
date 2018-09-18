@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Analyzis.Sysctl (anaSysctl, wrongSysctl) where
+module Analysis.Sysctl (anaSysctl, wrongSysctl) where
 
 
-import Analyzis.Common
-import Analyzis.Types
+import Analysis.Common
+import Analysis.Types
 
 import Control.Monad
 import Data.Maybe

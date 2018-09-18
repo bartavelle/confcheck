@@ -1,8 +1,8 @@
 {-# LANGUAGE TupleSections #-}
-module Analyzis.Rhosts (anaRhosts) where
+module Analysis.Rhosts (anaRhosts) where
 
-import Analyzis.Types
-import Analyzis.Common
+import Analysis.Types
+import Analysis.Common
 import Data.Condition
 
 import Control.Applicative

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Analyzis.WindowsAudit
+module Analysis.WindowsAudit
  ( analyzeWindowsAudit
  , analyzeAuditTools
  , parseWindowsAudit
@@ -30,16 +30,16 @@ import Data.Maybe
 import Safe
 
 import Data.PrismFilter
-import Analyzis.Common
-import Analyzis.Types
+import Analysis.Common
+import Analysis.Types
 import AuditTool
 
-data UserAnalyzis = WUser Text Bool Bool SID
+data UserAnalysis = WUser Text Bool Bool SID
                   | WGroup Text Text SID
                   | WProblem Text
                   deriving Show
 
-makePrisms ''UserAnalyzis
+makePrisms ''UserAnalysis
 
 analyzeAuditTools :: FilePath -> IO (Seq ConfigInfo)
 analyzeAuditTools = fmap (Seq.fromList . parseAuditTool) .  BSL.readFile
@@ -53,7 +53,7 @@ parseWindowsAudit = mkvlns
                   . T.lines
                   . T.decodeLatin1
     where
-        mkvlns x = lineVulns x ++ userAnalyzis x
+        mkvlns x = lineVulns x ++ userAnalysis x
         lineVulns = mapMaybe (uncurry parseLine)
                   . filter importantInfo
                   . map (_2 %~ cleanLine)
@@ -66,8 +66,8 @@ parseWindowsAudit = mkvlns
                                                ]
         importantInfo _ = True
 
-userAnalyzis :: [(Text, Text)] -> [Vulnerability]
-userAnalyzis = analyzeUser . arrangeInfo . mapMaybe (toUser . (_2 %~ cleanLine))
+userAnalysis :: [(Text, Text)] -> [Vulnerability]
+userAnalysis = analyzeUser . arrangeInfo . mapMaybe (toUser . (_2 %~ cleanLine))
     where
         getSid t = do
             elems <- tailMay (T.splitOn "-" t)
@@ -109,7 +109,7 @@ userAnalyzis = analyzeUser . arrangeInfo . mapMaybe (toUser . (_2 %~ cleanLine))
                 usermap = M.fromList (map (\(u, _, _, sid) -> (u, sid)) userlist ++ map (\(g,_,s) -> (g,s)) grouplist)
                 groupmap :: M.Map (Text, SID) [Text]
                 groupmap = nub <$> M.fromListWith (++) (map (\(groupname, username, groupsid) -> ((groupname, groupsid), [username])) grouplist)
-        arrangeInfo :: [UserAnalyzis] -> ( [(Text, Bool, Bool, SID)], [(Text, Text, SID)], [Text] )
+        arrangeInfo :: [UserAnalysis] -> ( [(Text, Bool, Bool, SID)], [(Text, Text, SID)], [Text] )
         arrangeInfo = runfold ((,,) <$> prismFold _WUser <*> prismFold _WGroup <*> prismFold _WProblem)
 
 ignoredCategory :: Text -> Bool

@@ -30,10 +30,10 @@ import Control.Concurrent.ParallelIO (parallel)
 import Control.DeepSeq (deepseq)
 import System.Environment
 
-import Analyzis.Types
-import Analyzis.Common
-import Analyzis.Oval
-import Analyzis.Debian
+import Analysis.Types
+import Analysis.Common
+import Analysis.Oval
+import Analysis.Debian
 import Data.Oval
 
 cveserial :: FilePath

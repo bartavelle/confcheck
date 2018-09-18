@@ -1,8 +1,8 @@
-module Analyzis.Ifconfig (anaIfconfig) where
+module Analysis.Ifconfig (anaIfconfig) where
 
 
-import Analyzis.Types
-import Analyzis.Common
+import Analysis.Types
+import Analysis.Common
 
 import Data.Maybe (mapMaybe)
 import qualified Data.Text as T

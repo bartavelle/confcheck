@@ -9,8 +9,8 @@ module Data.Microsoft
   , loadKBDays
   ) where
 
-import Analyzis.Common
-import Analyzis.Types
+import Analysis.Common
+import Analysis.Types
 
 import Data.Parsers.Xml
 import Control.Applicative
