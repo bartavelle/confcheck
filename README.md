@@ -6,7 +6,7 @@ You will need the [stack build tool](https://docs.haskellstack.org/en/stable/ins
 
 ```
 git clone https://github.com/bartavelle/confcheck-types
-git clone https://github.com/bartavelle/confcheck-audittools
+git clone https://github.com/bartavelle/confcheck-audittool
 git clone https://github.com/bartavelle/confcheck
 cd confcheck
 stack build
