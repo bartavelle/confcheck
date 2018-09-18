@@ -1,0 +1,157 @@
+name:                confcheck
+version:             0.1.0.0
+synopsis:            Initial project template from stack
+description:         Please see README.md
+homepage:            http://github.com/bartavelle/confcheck#readme
+license:             AGPL-3.0-only
+license-file:        LICENSE
+author:              Simon Marechal
+maintainer:          bartavelle@gmail.com
+copyright:           Simon Marechal
+category:            Web
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  ghc-options:         -Wall -O2 -Werror
+  ghc-prof-options:    -auto-all -caf-all
+  default-extensions:  OverloadedStrings
+  exposed-modules:
+    Analyzis
+    Analyzis.ConnectToApp
+    Analyzis.Cron
+    Analyzis.Debian
+    Analyzis.DebianJson
+    Analyzis.Files
+    Analyzis.Files.Conditions
+    Analyzis.Ifconfig
+    Analyzis.LinuxKern
+    Analyzis.Netstat
+    Analyzis.Oval
+    Analyzis.Parsers
+    Analyzis.Passwd
+    Analyzis.Rhosts
+    Analyzis.RPM
+    Analyzis.Shell
+    Analyzis.Solaris
+    Analyzis.Sssd
+    Analyzis.Sudoers
+    Analyzis.Sysctl
+    Analyzis.TarStream
+    Analyzis.WindowsAudit
+    Data.Common
+    Data.DebianVersion
+    Data.Microsoft
+    Data.Oval
+    Data.PrismFilter
+    Data.Serialize.Tdb
+  build-depends:       base >= 4.7 && < 5
+                     , attoparsec
+                     , containers
+                     , text
+                     , bytestring
+                     , safe
+                     , parsec
+                     , mtl
+                     , cereal
+                     , lens
+                     , aeson
+                     , time
+                     , zlib
+                     , thyme
+                     , persistent
+                     , comonad
+                     , blaze-markup
+                     , blaze-html
+                     , conduit
+                     , exceptions
+                     , semigroups
+                     , unordered-containers
+                     , parallel
+                     , strict-base-types
+                     , filepath
+                     , hashable
+                     , parsers
+                     , vector
+                     , foldl
+                     , compactmap
+                     , ShellCheck
+                     , split
+                     , network-ip
+                     , data-textual
+                     , hexpat
+                     , pcre-utils
+                     , stateWriter
+                     , transformers
+                     , yaml
+                     , withdependencies
+                     , vector-space
+                     , ShellCheck
+                     , confcheck-types
+                     , confcheck-audittool
+                     , fastparser
+                     , tar-conduit
+                     , conduit-extra
+                     , resourcet
+                     , primitive
+                     , transformers-base
+                     , regex-compat
+  default-language:    Haskell2010
+
+executable confcheck-exe
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N4 -Wall
+  ghc-prof-options:    -auto-all -caf-all
+  build-depends:       base
+                     , confcheck
+                     , confcheck-types
+                     , cassava
+                     , text
+                     , bytestring
+  default-language:    Haskell2010
+
+test-suite confcheck-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , confcheck
+                     , confcheck-types
+                     , tasty
+                     , tasty-hunit
+                     , parsec
+                     , attoparsec
+                     , time
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
+  default-language:    Haskell2010
+
+executable confcheck-serializer
+    main-is:           serializer.hs
+    hs-source-dirs:    app
+    ghc-options:       -Wall -rtsopts -j1 -threaded -with-rtsopts=-N
+    build-depends:     base
+                     , confcheck
+                     , confcheck-types
+                     , xml-lens
+                     , case-insensitive
+                     , xml-conduit
+                     , time
+                     , text
+                     , containers
+                     , bytestring
+                     , cereal
+                     , lens
+                     , directory
+                     , unordered-containers
+                     , cassava
+                     , vector
+                     , parallel-io
+                     , deepseq
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/bartavelle/confcheck

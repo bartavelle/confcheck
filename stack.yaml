@@ -1,0 +1,13 @@
+flags: {}
+packages:
+ - .
+ - '../confcheck-types'
+ - '../confcheck-audittool'
+resolver: lts-10.6
+extra-deps:
+  - elm-bridge-0.4.3
+  - fastparser-0.3.1.1
+  - hexpat-lens-0.1.7
+  - hexpat-tagsoup-0.1
+  - ShellCheck-0.3.8
+

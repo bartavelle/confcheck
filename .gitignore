@@ -1,0 +1,7 @@
+/source
+.stack-work
+src/Data/Sql.hs
+*.prof
+/serialized
+scripts/*.cab
+audit_startup.vbs
