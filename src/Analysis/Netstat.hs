@@ -20,7 +20,6 @@ import Data.Textual
 import Network.IP.Addr
 import Control.Monad.State.Strict as S
 import Data.Maybe ( catMaybes )
-import Data.Monoid
 
 anaNetstat :: Analyzer (Seq ConfigInfo)
 anaNetstat =    (parseNetstatNAP <$> requireTxt ["reseau/netstat-nap.txt"])

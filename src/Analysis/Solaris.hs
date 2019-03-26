@@ -33,7 +33,6 @@ import Text.Parsec.Text
 import Text.Parsec.Char (digit, char, string)
 import Text.Parsec.Prim (parse)
 import Control.Applicative
-import Data.Monoid
 import Data.Time (fromGregorian, Day)
 import qualified Data.Sequence as Seq
 import Data.Sequence (Seq)

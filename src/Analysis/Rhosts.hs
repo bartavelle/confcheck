@@ -9,7 +9,6 @@ import Control.Applicative
 import qualified Data.Text as T
 import Data.Text (Text)
 import Data.Sequence (Seq)
-import Data.Monoid
 
 data RhostSource = RSEquiv | RSUser Text
                  deriving (Show, Eq)

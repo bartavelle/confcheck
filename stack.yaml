@@ -3,11 +3,14 @@ packages:
  - .
  - '../confcheck-types'
  - '../confcheck-audittool'
-resolver: lts-10.6
+resolver: lts-13.14
 extra-deps:
   - elm-bridge-0.4.3
-  - fastparser-0.3.1.1
-  - hexpat-lens-0.1.7
+  - fastparser-0.3.1.2
+  - hexpat-lens-0.1.8
   - hexpat-tagsoup-0.1
-  - ShellCheck-0.3.8
+  - ShellCheck-0.6.0
+  - stateWriter-0.2.10
+  - withdependencies-0.2.4.3
+
 

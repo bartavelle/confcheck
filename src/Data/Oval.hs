@@ -35,7 +35,6 @@ import Control.Monad
 import Control.Applicative
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
-import Data.Monoid
 import qualified Data.HashMap.Strict as HM
 import Data.Hashable
 import GHC.Generics hiding (to)

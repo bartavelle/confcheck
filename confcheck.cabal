@@ -47,7 +47,7 @@ library
     Data.Oval
     Data.PrismFilter
     Data.Serialize.Tdb
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base >= 4.11 && < 5
                      , attoparsec
                      , containers
                      , text

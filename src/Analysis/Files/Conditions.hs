@@ -21,7 +21,6 @@ import GHC.Exts (sortWith)
 import Data.Text (Text)
 import Data.Sequence (Seq)
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Monoid
 import Data.Word (Word8)
 
 import Analysis.Types
@@ -75,7 +74,9 @@ decodeFile = bimap T.encodeUtf8 BS.pack
 
 instance Monoid FileRule where
     mempty = NoRule
-    mappend = RuleAdd
+
+instance Semigroup FileRule where
+    (<>) = RuleAdd
 
 tfp :: UnixFile -> Text
 tfp = T.pack . view filePath
@@ -216,7 +217,9 @@ data CompiledPatterns = CompiledPatterns { _cpPrefix   :: [FP]
 -- | Monoid  = or
 instance Monoid CompiledPatterns where
     mempty = CompiledPatterns [] [] [] [] (Always False)
-    CompiledPatterns a1 a2 a3 a4 a5 `mappend` CompiledPatterns b1 b2 b3 b4 b5 = CompiledPatterns (a1 <> b1) (a2 <> b2) (a3 <> b3) (a4 <> b4) (simplifyCond1 $ Or [a5,b5])
+
+instance Semigroup CompiledPatterns where
+    CompiledPatterns a1 a2 a3 a4 a5 <> CompiledPatterns b1 b2 b3 b4 b5 = CompiledPatterns (a1 <> b1) (a2 <> b2) (a3 <> b3) (a4 <> b4) (simplifyCond1 $ Or [a5,b5])
 
 compileCondition :: Condition (Pattern FP) -> CompiledPatterns
 compileCondition = go . simplifyCond1

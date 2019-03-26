@@ -16,7 +16,6 @@ import Control.Monad
 import qualified Data.Sequence as Seq
 import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
-import Data.Monoid
 
 listRPMs :: Analyzer (Seq ConfigInfo)
 listRPMs = fmap SoftwarePackage . rpmInfos <$> requireTxt ["logiciels/rpm-qa.txt"]

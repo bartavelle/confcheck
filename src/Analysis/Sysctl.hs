@@ -7,7 +7,6 @@ import Analysis.Types
 
 import Control.Monad
 import Data.Maybe
-import Data.Monoid
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import Data.Text (Text)

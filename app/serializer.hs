@@ -14,7 +14,6 @@ import qualified Data.Text.Read as T
 import qualified Data.HashMap.Strict as HM
 import qualified Text.XML as XML
 import Control.Lens
-import Data.Monoid
 import Text.XML.Stream.Parse hiding (attr)
 import Text.XML.Lens
 import Data.Time

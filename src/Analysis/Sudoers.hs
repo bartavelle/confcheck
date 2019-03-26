@@ -31,7 +31,6 @@ import Data.Char (isUpper,isSpace)
 import Data.List (nub,groupBy)
 import Data.Either (partitionEithers)
 import Data.Maybe (mapMaybe)
-import Data.Monoid
 import Control.Applicative
 import Control.Lens
 import Control.Monad hiding (forM, mapM, sequence)

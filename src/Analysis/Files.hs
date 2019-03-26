@@ -23,7 +23,6 @@ import qualified Data.CompactMap as CM
 import Data.Sequence.Lens
 import Data.Text (Text)
 import Data.Sequence (Seq)
-import Data.Monoid
 import Data.Word (Word8)
 
 import ByteString.Parser.Fast
@@ -95,14 +94,17 @@ parseOldPerms :: Parser FPerms
 parseOldPerms = do
     let parseOldPerm :: Parser (Bool, Int)
         parseOldPerm = do
-            [r,w,x] <- replicateM 3 (F.satisfy (`elem` ("rwxstST-" :: String)))
-            let (s,ox) = case x of
-                             '-' -> (False, False)
-                             'x' -> (False, True)
-                             'S' -> (True, False)
-                             'T' -> (True, False)
-                             _   -> (True, True)
-            return (s, p 4 (r /= '-') + p 2 (w /= '-') + p 1 ox)
+          rwx <- replicateM 3 (F.satisfy (`elem` ("rwxstST-" :: String)))
+          case rwx of
+            [r,w,x] ->
+              let (s,ox) = case x of
+                               '-' -> (False, False)
+                               'x' -> (False, True)
+                               'S' -> (True, False)
+                               'T' -> (True, False)
+                               _   -> (True, True)
+              in  return (s, p 4 (r /= '-') + p 2 (w /= '-') + p 1 ox)
+            _ -> error "can't happen in parseOldPerms"
         p x c = if c then x else 0
     (!suid, !u) <- parseOldPerm
     (!guid, !g) <- parseOldPerm

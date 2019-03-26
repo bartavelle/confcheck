@@ -11,7 +11,6 @@ import qualified Data.Text.Encoding as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Serialize as S
-import Data.Monoid
 import Control.Lens
 import Control.Monad
 import Control.Applicative

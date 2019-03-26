@@ -69,7 +69,6 @@ import Control.Monad.Trans.Resource (runResourceT)
 import Data.String (fromString)
 import Data.Text (Text)
 import Data.Sequence (Seq)
-import Data.Monoid
 
 data RegroupedVulnerability = RV (Seq Vulnerability)
                             | RPack (M.Map RPMVersion PackageUniqInfo)
@@ -244,8 +243,8 @@ analyzeStream :: AuditFileType
 analyzeStream tp xdiag dispatchoval dispatchdebs okbd fileLocation content =
     let posta = postTarAnalysis dispatchoval dispatchdebs xdiag
     in  case tp of
-          AuditTar     -> runResourceT (CL.sourceList (BSL.toChunks content) =$ tarAnalyzer configExtract $$ CL.foldMap id) >>= posta
-          AuditTarGz   -> runResourceT (CL.sourceList (BSL.toChunks content) =$ CZ.ungzip =$ tarAnalyzer configExtract $$ CL.foldMap id) >>= posta
+          AuditTar     -> runConduit (CL.sourceList (BSL.toChunks content) .| tarAnalyzer configExtract .| CL.foldMap id) >>= posta
+          AuditTarGz   -> runConduit (CL.sourceList (BSL.toChunks content) .| CZ.ungzip .| tarAnalyzer configExtract .| CL.foldMap id) >>= posta
           WinVBSReport -> return (Seq.fromList (parseWindowsAudit (BSL.toStrict content)))
           WinAuditTool -> posta (Seq.fromList (parseAuditTool content))
           MBSAReport   -> analyzeMBSAContent okbd fileLocation (BSL.toStrict content)

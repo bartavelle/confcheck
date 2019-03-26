@@ -16,7 +16,6 @@ import Control.Monad
 import Data.List (foldl')
 import Data.Text (Text)
 import Data.Sequence (Seq)
-import Data.Monoid
 
 data TdbData = UID Int Text
              | GID Int [Text]

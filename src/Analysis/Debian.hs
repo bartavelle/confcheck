@@ -31,7 +31,6 @@ import qualified Data.Serialize as S
 import Control.Lens
 import Control.Monad
 import Control.Applicative
-import Data.Monoid
 import Data.Sequence (Seq)
 import Data.Text (Text)
 import qualified Data.HashMap.Strict as HM

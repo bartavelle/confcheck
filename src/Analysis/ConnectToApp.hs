@@ -7,7 +7,6 @@ import           Data.Either (partitionEithers)
 import           Data.List (foldl')
 import           Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as M
-import           Data.Monoid
 import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Text as T

@@ -20,7 +20,6 @@ import Data.Text (Text)
 import Data.Sequence (Seq)
 import Data.Maybe (fromMaybe)
 import Control.Monad.State.Strict
-import Data.Monoid
 
 import Analysis.Types
 import Analysis.Files.Conditions

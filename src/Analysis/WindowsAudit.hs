@@ -19,7 +19,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Data.Text (Text)
 import Data.Sequence (Seq)
-import Data.Monoid
 import Data.List (nub)
 import Data.Word (Word8)
 import Data.Char

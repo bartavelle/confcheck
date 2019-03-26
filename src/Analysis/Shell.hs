@@ -4,8 +4,9 @@ module Analysis.Shell (toCommands) where
 
 import ShellCheck.Parser
 import ShellCheck.AST
-import ShellCheck.Options
+import ShellCheck.Interface
 import Control.Monad.Writer
+import Control.Monad.Identity (Identity(..))
 import Data.List (nub)
 
 data Command = Command { _cmdpath :: FilePath
@@ -34,7 +35,9 @@ extractParams (Command cmd prms) =
               _ -> []
 
 toCommands :: FilePath -> String -> Either String [FilePath]
-toCommands fn cnt = case parseShell defaultAnalysisOptions fn cnt of
-        ParseResult (Just (t, _)) _ -> Right $ concatMap extractParams (extractCommands t)
-        ParseResult Nothing notes   -> Left (unlines (map show notes))
+toCommands fn cnt = case prRoot <$> parseScript fileLoader (newParseSpec { psFilename = fn, psScript = cnt }) of
+        Identity (Just t)  -> Right $ concatMap extractParams (extractCommands t)
+        _ -> Left "failed"
+   where
+     fileLoader = SystemInterface (\_ -> Identity (Left "can't load"))
 

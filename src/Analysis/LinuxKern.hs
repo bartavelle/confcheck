@@ -8,7 +8,6 @@ import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Lens
-import Data.Monoid
 
 anaKernel :: Analyzer (Seq ConfigInfo)
 anaKernel = parseVersion <$> requireTxt ["etat/version.txt"]

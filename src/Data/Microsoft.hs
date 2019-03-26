@@ -26,7 +26,6 @@ import qualified Data.IntMap.Strict as IM
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import Data.Sequence (Seq)
-import Data.Monoid
 
 data MBSA = MBSA { _mbsaId        :: Text
                  , _mbsaKBID      :: Int
