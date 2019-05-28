@@ -1,6 +1,6 @@
 name:                confcheck
 version:             0.1.0.0
-synopsis:            Initial project template from stack
+synopsis:            Configuration checking library
 description:         Please see README.md
 homepage:            http://github.com/bartavelle/confcheck#readme
 license:             AGPL-3.0-only

@@ -69,10 +69,10 @@ data KBDate = KBDate { _kbdPosted      :: Day
                      } deriving Show
 
 instance FromNamedRecord KBDate where
-    parseNamedRecord m = KBDate <$> (m .: "Date\nPosted" >>= getDay)
+    parseNamedRecord m = KBDate <$> (m .: "Date Posted" >>= getDay)
                                 <*> (m .: "Bulletin KB"  >>= mgetInt)
                                 <*> (m .: "Component KB" >>= mgetInt)
-                                <*> (m .: "Bulletin\nID")
+                                <*> (m .: "Bulletin Id")
         where
             getDay t = case mapM text2Int (T.splitOn "/" t) of
                            Just [d,mn,ye] -> pure (fromGregorian (fromIntegral ye) mn d)
@@ -107,6 +107,16 @@ mainF = do
                     BS.writeFile cveserial (S.encode r)
                     return r
     BS.writeFile (serialdir <> "/cve.cereal") (S.encode cves)
+    putStrLn "Serializing KB dates"
+    l <- loadMicrosoftBulletin (sourcedir <> "/BulletinSearch.csv")
+    case l of
+        -- sérialisé sous forme [(Int, Text, Day)]
+        Right kbdates -> let kblist = concatMap (\(KBDate d k1 k2 t) -> map (fmap (,t,d)) [k1,k2]) kbdates
+                             lst :: [(Int, T.Text, Day)]
+                             lst = catMaybes kblist
+                         in  BS.writeFile (serialdir <> "/BulletinSearch.serialized") (S.encode lst)
+        Left rr -> error rr
+
     forM_ [ "com.redhat.rhsa-all.xml"
           , "com.ubuntu.trusty.cve.oval.xml"
           , "com.ubuntu.xenial.cve.oval.xml"
@@ -124,14 +134,4 @@ mainF = do
                   | "opensuse."  `isPrefixOf` f = enrichOval cves oval
                   | otherwise = oval
         BS.writeFile (serialdir ++ "/" ++ f) (S.encode (eoval, HM.toList tests))
-    putStrLn "Serializing KB dates"
-    l <- loadMicrosoftBulletin (sourcedir <> "/BulletinSearch.csv")
-    case l of
-        -- sérialisé sous forme [(Int, Text, Day)]
-        Right kbdates -> let kblist = concatMap (\(KBDate d k1 k2 t) -> map (fmap (,t,d)) [k1,k2]) kbdates
-                             lst :: [(Int, T.Text, Day)]
-                             lst = catMaybes kblist
-                         in  BS.writeFile (serialdir <> "/BulletinSearch.serialized") (S.encode lst)
-        Left rr -> error rr
-
 

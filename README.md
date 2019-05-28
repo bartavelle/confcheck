@@ -43,6 +43,8 @@ cd ..
 
 ```
 
+You also need to retrieve Microsoft's `BulletinSearch.xlsx` and convert it to CSV.
+
 ## Using the program
 
 ```
