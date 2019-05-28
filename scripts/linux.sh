@@ -90,7 +90,13 @@ cd ..
 
 #-----------
 mkdir reseau
-cd reseau
+cd reseau || exit
+ip addr list > ip-addr.txt
+ip neighbor > ip-neighbor.txt
+ip route show > ip-routes.txt
+ip -6 route show >> ip-routes.txt
+ss -laputen > ss-laputen.txt
+
 arp -n > arp-n.txt
 ifconfig -a > ifconfig-a.txt
 netstat -nap > netstat-nap.txt
