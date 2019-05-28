@@ -18,17 +18,6 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Text.Megaparsec.Char.Lexer (hexadecimal)
 
-
-{-
-import Data.Maybe (mapMaybe)
-import qualified Data.Text as T
-import Data.Textual
-import Data.Char (isAlphaNum)
-import Control.Applicative
-import Control.Monad
-import Data.Bits
--}
-
 data Retrieved
     = Retrieved
     { _itfname  :: Maybe Text
