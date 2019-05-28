@@ -9,6 +9,7 @@ git clone https://github.com/bartavelle/confcheck-types
 git clone https://github.com/bartavelle/confcheck-audittool
 git clone https://github.com/bartavelle/confcheck
 cd confcheck
+mv stack.yaml.sample stack.yaml
 stack build
 ```
 
@@ -33,7 +34,7 @@ done
 wget -O suse.linux.enterprise.12.xml http://support.novell.com/security/oval/suse.linux.enterprise.12.xml
 wget -O suse.linux.enterprise.server.10.xml http://support.novell.com/security/oval/suse.linux.enterprise.server.10.xml
 wget -O suse.linux.enterprise.server.11.xml http://support.novell.com/security/oval/suse.linux.enterprise.server.11.xml
-wget -O patchdiag.ref https://getupdates.oracle.com/reports/patchdiag.xref
+wget -O patchdiag.xref https://getupdates.oracle.com/reports/patchdiag.xref
 wget -O com.ubuntu.trusty.cve.oval.xml https://people.canonical.com/~ubuntu-security/oval/com.ubuntu.trusty.cve.oval.xml
 wget -O com.ubuntu.xenial.cve.oval.xml https://people.canonical.com/~ubuntu-security/oval/com.ubuntu.xenial.cve.oval.xml
 
