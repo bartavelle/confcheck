@@ -36,6 +36,7 @@ import Analysis.TarStream
 import Analysis.Netstat
 import Analysis.Sudoers
 import Analysis.Ifconfig
+import Analysis.Ipaddr
 import Analysis.Sssd
 import Analysis.Sysctl
 import Analysis.Rhosts
@@ -169,7 +170,7 @@ configExtract = map (R.Once,) once <> map (R.Reset,) reset
              : anaNetstat
              : anaFilesNG
              : anaFilesOld
-             : anaIfconfig
+             : (anaIpaddr <|> anaIfconfig)
              : anaSysctl
              : anaKernel
              : listRPMs

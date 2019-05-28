@@ -27,6 +27,7 @@ library
     Analysis.Files
     Analysis.Files.Conditions
     Analysis.Ifconfig
+    Analysis.Ipaddr
     Analysis.LinuxKern
     Analysis.Netstat
     Analysis.Oval
