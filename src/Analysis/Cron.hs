@@ -6,14 +6,10 @@ import Analysis.Common
 import Analysis.Parsers
 import Analysis.Shell
 
-import Text.Parsec.Error (ParseError)
-import Text.Parsec.Text
-import Text.Parsec.Char
-import Text.Parsec.Prim (parse,try)
+import Text.Megaparsec
+import Text.Megaparsec.Char
 import Data.Sequence (Seq)
 import Data.Text (Text)
-import Text.Parsec.Combinator
-import Control.Applicative
 import Data.Char (isSpace)
 import qualified Data.Text as T
 
@@ -48,28 +44,28 @@ isSchedule = isSchedule' . T.stripStart
                       | "crontab: " `T.isPrefixOf` t = False
                       | otherwise = True
 
-parseCrontab :: [Text] -> [Text] -> [Either ParseError CronEntry]
+parseCrontab :: [Text] -> [Text] -> [Either (ParseErrorBundle Text Void) CronEntry]
 parseCrontab [_,src] = map (parse crontabparser (T.unpack src)) . filter isSchedule
 parseCrontab _ = const []
 
 parseSchedule :: Parser CronSchedule
 parseSchedule = do
     lx (return ())
-    at <- optionMaybe (char '@')
-    let e = T.pack <$> lx (many1 (satisfy (not . isSpace)))
+    at <- optional (char '@')
+    let e = T.pack <$> lx (some (satisfy (not . isSpace)))
     lx $ case at of
-             Just _ ->     try (string "reboot" *> pure CronReboot)
-                       <|> try (string "yearly" *> pure CronYearly)
-                       <|> try (string "annually" *> pure CronYearly)
-                       <|> try (string "monthly" *> pure CronMonthly)
-                       <|> try (string "weekly" *> pure CronWeekly)
-                       <|> try (string "daily" *> pure CronDaily)
-                       <|> try (string "hourly" *> pure CronHourly)
+             Just _ ->     try (CronReboot <$ string "reboot")
+                       <|> try (CronYearly <$ string "yearly")
+                       <|> try (CronYearly <$ string "annually")
+                       <|> try (CronMonthly <$ string "monthly")
+                       <|> try (CronWeekly <$ string "weekly")
+                       <|> try (CronDaily <$ string "daily")
+                       <|> try (CronHourly <$ string "hourly")
              Nothing -> CronSchedule <$> e <*> e <*> e <*> e <*> e
 
 parseCommand :: Text -> Parser (Text, [FilePath])
 parseCommand u = do
-    c <- many1 (anyChar)
+    c <- some anySingle
     let tu = T.unpack u
     case toCommands ("Crontab of user " ++ tu) c of
         Right se -> return (T.pack c, se)
@@ -82,14 +78,14 @@ crontabparser = do
     (c, ec) <- lx (parseCommand u)
     return (CronEntry u s c ec)
 
-parseUserCrontab :: [Text] -> [Text] -> [Either ParseError CronEntry]
+parseUserCrontab :: [Text] -> [Text] -> [Either (ParseErrorBundle Text Void) CronEntry]
 parseUserCrontab [crontabname] = map (parse (ucrontabparser username) (T.unpack crontabname)) . filter isSchedule
     where
         username = fst $ T.breakOn "-"
                        $ T.drop 1
                        $ snd
                        $ T.breakOn "/"
-                       $ crontabname
+                         crontabname
 parseUserCrontab _ = const []
 
 ucrontabparser :: Text -> Parser CronEntry

@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
 module Data.DebianVersion (DebianVersion, parseDebianVersion, prettyDebianVersion, version, revision) where
 
+import Analysis.Parsers
+
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import Data.Char
@@ -9,8 +11,8 @@ import qualified Data.Text as T
 import Text.Regex
 import Control.Monad
 
-import Text.Parsec
-import Text.Parsec.Text
+import Text.Megaparsec
+import Text.Megaparsec.Char
 
 data DebianVersion
   = DebianVersion String (Found Int, NonNumeric, Found NonNumeric) deriving (Data, Typeable)
@@ -114,13 +116,13 @@ evr (DebianVersion s _) =
       -- I really don't think this can happen.
       _ -> error ("Invalid Debian Version String: " ++ s)
 
-parseDebianVersion :: T.Text -> Either ParseError DebianVersion
+parseDebianVersion :: T.Text -> Either (ParseErrorBundle T.Text Void) DebianVersion
 parseDebianVersion t = case parse prs "version" t of
                          Left rr -> Left rr
                          Right evr' -> Right (DebianVersion (T.unpack t) evr')
   where
     prs = do
-      skipMany (oneOf " \t")
+      skipMany (oneOf (" \t" :: String))
       e <- parseEpoch
       upstreamVersion <- parseNonNumeric True True
       debianRevision <- option (Simulated (NonNumeric "" (Simulated (Numeric 0 Nothing)))) (char '-' >> parseNonNumeric True False >>= return . Found)
@@ -128,23 +130,23 @@ parseDebianVersion t = case parse prs "version" t of
 
 parseEpoch :: Parser (Found Int)
 parseEpoch =
-    option (Simulated 0) (try (many1 digit >>= \d -> char ':' >> return (Found (read d))))
+    option (Simulated 0) (try (some digitChar >>= \d -> char ':' >> return (Found (read d))))
 
 parseNonNumeric :: Bool -> Bool -> Parser NonNumeric
 parseNonNumeric zeroOk upstream =
-    do nn <- (if zeroOk then many else many1) (noneOf "-0123456789" <|> if upstream then upstreamDash else mzero)
+    do nn <- (if zeroOk then many else some) (noneOf ("-0123456789" :: String) <|> if upstream then upstreamDash else mzero)
        n <- parseNumeric upstream
        return $ NonNumeric nn n
     where
       upstreamDash :: Parser Char
       upstreamDash = try $ do
         void (char '-')
-        void (lookAhead (many (noneOf "- \n\t") >> char '-'))
+        void (lookAhead (many (noneOf ("- \n\t" :: String)) >> char '-'))
         return '-'
 
 parseNumeric :: Bool -> Parser (Found Numeric)
 parseNumeric upstream =
-    do n <- many1 (satisfy isDigit)
+    do n <- some (satisfy isDigit)
        nn <- option Nothing  (parseNonNumeric False upstream >>= return . Just)
        return $ Found (Numeric (read n) nn)
     <|>

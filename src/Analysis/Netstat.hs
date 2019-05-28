@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 module Analysis.Netstat (anaNetstat, parseNetstatNA, parseNetstatNAP) where
 
 import Analysis.Types
@@ -10,13 +11,9 @@ import Data.Sequence (Seq)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Sequence as Seq
-import Text.Parsec.Prim (parse,try)
-import Text.Parsec.Char
-import Text.Parsec.Text
-import Text.Parsec.Combinator (notFollowedBy)
+import Text.Megaparsec
+import Text.Megaparsec.Char
 import Control.Monad
-import Control.Applicative
-import Data.Textual
 import Network.IP.Addr
 import Control.Monad.State.Strict as S
 import Data.Maybe ( catMaybes )
@@ -34,7 +31,7 @@ data SolarisSection = SecUDP4
 parseNetstatNA :: Text -> Seq ConfigInfo
 parseNetstatNA = Seq.fromList . catMaybes . (\lns -> evalState (mapM (parseLine . T.strip) lns) SecUnk ) . T.lines
     where
-        parseLine :: T.Text -> State SolarisSection (Maybe ConfigInfo)
+        parseLine :: T.Text -> S.State SolarisSection (Maybe ConfigInfo)
         parseLine "UDP: IPv4" = put SecUDP4 >> return Nothing
         parseLine "TCP: IPv4" = put SecTCP4 >> return Nothing
         parseLine "UDP: IPv6" = put SecUDP6 >> return Nothing
@@ -49,8 +46,7 @@ parseNetstatNA = Seq.fromList . catMaybes . (\lns -> evalState (mapM (parseLine 
                                         Right (ls, prt) -> return $ Just $ CConnection $ IP (cstr ls prt i LISTEN) Nothing
                                         Left _ -> mkerr "Could not parse listening port"
                 listeningip i = do
-                    ls <- string "*" *> pure i
-                         <|> textual
+                    ls <- (i <$ string "*") <|> textual
                     void $ char '.'
                     prt <- textual
                     return (ls, prt)
@@ -103,31 +99,31 @@ ipv6 = try (string "::ffff:" *> textual)
 getCnxId :: Parser (IP, InetPort, IP, DPORT)
 getCnxId = do
     let parseInt' = parseInt :: Parser Int
-    void $ lx $ parseInt'
-    void $ lx $ parseInt'
+    void $ lx parseInt'
+    void $ lx parseInt'
     sip <- lx ip
     void $ char ':'
     sport <- lx textual
     dip <- lx ip
     void $ char ':'
-    dport <- (   (char '*' *> pure AnyPort)
-             <|> (DP <$> textual)
-             )
+    dport <- (AnyPort <$ char '*')
+         <|> (DP <$> textual)
+             
     return (sip, sport, dip, dport)
 
 loadProgram :: Parser (Maybe (Int, Text))
-loadProgram = char '-' *> pure Nothing
+loadProgram = Nothing <$ char '-'
        <|> do
            pid <- parseInt
            void $ char '/'
-           prg <- T.strip . T.pack <$> some anyChar
+           prg <- T.strip . T.pack <$> some anySingle
            return (Just (pid, prg))
 
 parseTCPNAP :: Parser Connection
 parseTCPNAP = do
     (lip, lport, rip, drport) <- lx getCnxId
     let mkDport x = case drport of
-                        AnyPort -> fail ("This type of connection should have a remote port")
+                        AnyPort -> fail "This type of connection should have a remote port"
                         DP rport -> pure (x rport)
     stt <- lx (   try (string "LISTEN"      *> pure LISTEN )
               <|> try (string "ESTABLISHED" *> mkDport ESTABLISHED )
@@ -137,8 +133,7 @@ parseTCPNAP = do
               <|> try (string "SYN_SENT"    *> mkDport SYN_SENT )
               <|> try (string "FIN_WAIT2"   *> mkDport FIN_WAIT2 )
               )
-    prg <- loadProgram
-    return (IP (TCP lip lport rip stt) prg)
+    IP (TCP lip lport rip stt) <$> loadProgram
 
 parseUDPNAP :: Parser Connection
 parseUDPNAP = do
@@ -153,7 +148,7 @@ parseUDPNAP = do
 netstateNAPLine :: Parser Connection
 netstateNAPLine = do
     p <- lx $ do
-      str <- replicateM 3 lower
+      str <- replicateM 3 lowerChar
       void $ optional (char '6')
       return str
     case p of

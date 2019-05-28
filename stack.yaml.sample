@@ -12,5 +12,6 @@ extra-deps:
   - ShellCheck-0.6.0
   - stateWriter-0.2.10
   - withdependencies-0.2.4.3
+  - parsers-megaparsec-0.1.0.1
 
 

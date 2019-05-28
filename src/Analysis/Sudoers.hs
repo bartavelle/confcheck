@@ -4,7 +4,6 @@ module Analysis.Sudoers (anasudo, isUserMatching, testCommand, extractCommands, 
 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
-import qualified Data.Textual as Txt
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import qualified Data.Foldable as F
@@ -18,20 +17,13 @@ import Analysis.Parsers
 import Analysis.Common
 import Data.Condition
 
-import Text.Parsec.Text
-import Text.Parsec.Error
-import Text.Parsec.Prim (parse)
-
-import Text.Parser.Token
-import Text.Parser.LookAhead
-import Text.Parser.Char
-import Text.Parser.Combinators
+import Text.Megaparsec
+import Text.Megaparsec.Char
 
 import Data.Char (isUpper,isSpace)
 import Data.List (nub,groupBy)
 import Data.Either (partitionEithers)
 import Data.Maybe (mapMaybe)
-import Control.Applicative
 import Control.Lens
 import Control.Monad hiding (forM, mapM, sequence)
 import Data.Traversable
@@ -111,7 +103,7 @@ sepNE :: Char -> Parser a -> Parser (NE.NonEmpty a)
 sepNE sep prs = NE.fromList <$> (prs `sepBy1` symbolic sep)
 
 parseAlias :: String -> Parser a -> Parser (NE.NonEmpty a)
-parseAlias h p = lx (string h) *> sepNE ':' p
+parseAlias h p = lx (string (T.pack h)) *> sepNE ':' p
 
 literal :: Parser Text
 literal = try stringLiteral <|> parseUnixUser
@@ -121,11 +113,11 @@ cmdarg = try stringLiteral <|> litstring
     where
         litstring = do
             c <- T.pack <$> some (satisfy (\x -> not (isSpace x) && x /= ',' && x /= '\\'))
-            l <- optional (lookAhead anyChar)
+            l <- optional (lookAhead anySingle)
             case l of
                 Just '\\' -> do
                     void $ char '\\'
-                    escaped <- anyChar
+                    escaped <- anySingle
                     rst <- litstring
                     return (c <> T.singleton escaped <> rst)
                 _ -> return c
@@ -133,7 +125,7 @@ cmdarg = try stringLiteral <|> litstring
 name :: Parser Text
 name = T.pack <$> lx name'
     where
-        name' = (:) <$> upper <*> many (satisfy (\x -> isUpper x || x == '_'))
+        name' = (:) <$> upperChar <*> many (satisfy (\x -> isUpper x || x == '_'))
 
 negatable :: Parser a -> Parser (Negatable a)
 negatable p = do
@@ -161,9 +153,9 @@ useralias x = x <$> name <* symbolic '=' <*> runaslist
 hostlist :: Parser (SudoList NHost)
 hostlist = sepNE ',' (negatable (lx hostalias'))
     where
-        hostalias' =   try (NNetwork4              <$> Txt.textual)
-                   <|> try (NNetwork6              <$> Txt.textual)
-                   <|> try (NIP                    <$> Txt.textual)
+        hostalias' =   try (NNetwork4              <$> textual)
+                   <|> try (NNetwork6              <$> textual)
+                   <|> try (NIP                    <$> textual)
                    <|> try (char '+' *> (NNetgroup <$> literal))
                    <|> try (NHostAliasName         <$> name)
                    <|>     (NHostname              <$> literal)
@@ -174,7 +166,7 @@ hostalias :: Parser SHost
 hostalias = SHost <$> name <* symbolic '=' <*> hostlist
 
 cmnd :: Parser NCmnd
-cmnd = try (lx (string "sudoedit") *> pure NSudoEdit)
+cmnd = try (NSudoEdit <$ lx (string "sudoedit"))
    <|> try (NCmndAliasName <$> name)
    <|> try (NDirectory     <$> directory)
    <|>     (NCommand       <$> cmd)
@@ -188,7 +180,7 @@ cmnd = try (lx (string "sudoedit") *> pure NSudoEdit)
         checkFullyqualified t | T.null t = fail "Empty command ? Shoud not happen."
                               | T.head t == '/' = return t
                               | otherwise = fail "Expected a fully qualified path"
-        commandargs =   try (string "\"\"" *> pure (Just []))
+        commandargs =   try (Just [] <$ string "\"\"")
                     <|> optional (some (lx cmdarg))
                     <?> "command argument"
 cmndalias :: Parser SCmnd
@@ -213,16 +205,16 @@ cmndspec :: Parser SCmndSpec
 cmndspec = SCmndSpec <$> lx runasspec <*> (S.fromList <$> (tagspec `sepEndBy` symbolic ':')) <*> negatable cmnd
 
 tagspec :: Parser TagSpec
-tagspec =   try (string "NOPASSWD"     *> pure NOPASSWD)
-        <|> try (string "PASSWD"       *> pure PASSWD)
-        <|> try (string "NOEXEC"       *> pure NOEXEC)
-        <|> try (string "EXEC"         *> pure EXEC)
-        <|> try (string "SETENV"       *> pure SETENV)
-        <|> try (string "NOSETENV"     *> pure NOSETENV)
-        <|> try (string "LOG_INPUT"    *> pure LOG_INPUT)
-        <|> try (string "NOLOG_INPUT"  *> pure NOLOG_INPUT)
-        <|> try (string "LOG_OUTPUT"   *> pure LOG_OUTPUT)
-        <|> try (string "NOLOG_OUTPUT" *> pure NOLOG_OUTPUT)
+tagspec =   try (NOPASSWD     <$ string "NOPASSWD")
+        <|> try (PASSWD       <$ string "PASSWD")
+        <|> try (NOEXEC       <$ string "NOEXEC")
+        <|> try (EXEC         <$ string "EXEC")
+        <|> try (SETENV       <$ string "SETENV")
+        <|> try (NOSETENV     <$ string "NOSETENV")
+        <|> try (LOG_INPUT    <$ string "LOG_INPUT")
+        <|> try (NOLOG_INPUT  <$ string "NOLOG_INPUT")
+        <|> try (LOG_OUTPUT   <$ string "LOG_OUTPUT")
+        <|> try (NOLOG_OUTPUT <$ string "NOLOG_OUTPUT")
         <?> "tag spec"
 
 runasspec :: Parser RunAsSpec
@@ -243,7 +235,7 @@ sudoline =   try (UserAlias  <$> useraliases)
          <|> try (UserSpec   <$> lx runaslist <*> sepNE ':' userspec)
          <|> (lx (string "Defaults") *> (Defaults . T.pack <$> some (satisfy (/= '\n'))))
 
-parseCnt :: Text -> [(Text, Either ParseError SudoerLine)]
+parseCnt :: Text -> [(Text, Either (ParseErrorBundle Text Void) SudoerLine)]
 parseCnt cnt = zip lns $ map (parse (sudoline <* comments) "dummy") lns
     where
         comments = eof <|> void (char '#')
@@ -299,10 +291,8 @@ resolveCmndlist commandmap origline = resolveSudoList rescmnd . (:[]) . Positive
                                          Nothing -> Left ("Unknown command alias " <> n <> " on line " <> origline)
                                          Just m -> resolveSudoList rescmnd m
 
-resolveSudoList :: Eq b => F.Foldable f => (a -> Either Text (Condition b)) -> f (Negatable a) -> Either Text (Condition b)
-resolveSudoList f = fmap (simplifyCond1 . tocond . partitionNegatable) . mapM resolvea . F.toList
-    where
-        resolvea  = sequence . fmap f
+resolveSudoList :: (Eq b, F.Foldable f) => (a -> Either Text (Condition b)) -> f (Negatable a) -> Either Text (Condition b)
+resolveSudoList f = fmap (simplifyCond1 . tocond . partitionNegatable) . mapM (traverse f) . F.toList
 
 tocond :: ([Condition b], [Condition b]) -> Condition b
 tocond ([], []) = Always True

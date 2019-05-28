@@ -1,42 +1,87 @@
 {-# LANGUAGE RankNTypes #-}
-module Analysis.Parsers (parseInt, parseDateYMD, parseTimeMs, lx, parseUnixUser, parseToConfigInfoMT, parseEnglishMonth, parseToConfigInfoND, parseErrorToConfigInfo, parseErrorToCError, hexValue) where
+module Analysis.Parsers
+ ( parseInt
+ , parseDateYMD
+ , parseTimeMs
+ , lx
+ , parseUnixUser
+ , parseToConfigInfoMT
+ , parseEnglishMonth
+ , parseToConfigInfoND
+ , parseErrorToConfigInfo
+ , parseErrorToCError
+ , hexValue
+ , textual
+ , Parser
+ , Void
+ , stringLiteral
+ , symbolic
+ , decimal
+ , parens
+ , brackets
+ , braces
+ ) where
 
 import Prelude
 import Analysis.Types
-import Text.Parsec.Combinator
-import Text.Parsec.Char
-import Text.Parsec.Text
-import Text.Parsec.Prim (try)
-import Control.Applicative
+import Text.Megaparsec
+import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isDigit, digitToInt)
-import Text.Parsec.Error
-import Text.Parsec.Pos
 import Data.Time
 import qualified Data.Sequence as Seq
 import Data.List (foldl')
-
+import qualified Data.Textual as Textual
+import qualified Text.Parser.Token as Tok
+import qualified Text.Megaparsec.Parsers as TP
 import qualified Data.Parsers.Helpers as H
+import Data.Void (Void)
+import Data.String (IsString)
+
+type Parser = Parsec Void Text
+
+textual :: Textual.Textual a => Parser a
+textual = TP.unParsecT Textual.textual
+
+stringLiteral :: IsString s => Parser s
+stringLiteral = TP.unParsecT Tok.stringLiteral
+
+symbolic :: Char -> Parser Char
+symbolic = TP.unParsecT . Tok.symbolic
+
+parens :: Parser a -> Parser a
+parens = TP.unParsecT . Tok.parens . TP.ParsecT
+
+brackets :: Parser a -> Parser a
+brackets = TP.unParsecT . Tok.brackets . TP.ParsecT
+
+braces :: Parser a -> Parser a
+braces = TP.unParsecT . Tok.braces . TP.ParsecT
 
 parseInt :: (Num b, Read b, Integral b) => Parser b
-parseInt = read <$> many1 digit
+parseInt = Text.Megaparsec.Char.Lexer.decimal
+
+decimal :: Parser Integer
+decimal = TP.unParsecT Tok.decimal
 
 lx :: Parser a -> Parser a
-lx p = p <* spaces
+lx p = p <* space
 
-parseErrorToConfigInfo :: Maybe T.Text -> ParseError -> ConfigInfo
-parseErrorToConfigInfo o rr = ConfigError (ParsingError (T.pack (sourceName (errorPos rr))) (show rr) o)
+parseErrorToConfigInfo :: Maybe T.Text -> ParseErrorBundle Text Void -> ConfigInfo
+parseErrorToConfigInfo o rr = ConfigError (ParsingError "TODO megaparsec migration" (errorBundlePretty rr) o)
 
-parseToConfigInfoMT :: (a -> ConfigInfo) -> [T.Text] -> [Either ParseError a] -> Seq.Seq ConfigInfo
+parseToConfigInfoMT :: (a -> ConfigInfo) -> [T.Text] -> [Either (ParseErrorBundle Text Void) a] -> Seq.Seq ConfigInfo
 parseToConfigInfoMT f lst = Seq.fromList . zipWith tci lst
     where
         tci o (Left rr) = parseErrorToConfigInfo (Just o) rr
         tci _ (Right a) = f a
 
-parseErrorToCError :: ParseError -> CError
-parseErrorToCError rr = ParsingError (T.pack (sourceName (errorPos rr))) (show rr) Nothing
+parseErrorToCError :: ParseErrorBundle Text Void -> CError
+parseErrorToCError rr = ParsingError "TODO megaparsec migration" (errorBundlePretty rr) Nothing
 
-parseToConfigInfoND :: (a -> ConfigInfo) -> [Either ParseError a] -> Seq.Seq ConfigInfo
+parseToConfigInfoND :: (a -> ConfigInfo) -> [Either (ParseErrorBundle Text Void) a] -> Seq.Seq ConfigInfo
 parseToConfigInfoND f = Seq.fromList . map tci
     where
         tci (Left rr) = ConfigError $ parseErrorToCError rr
@@ -49,15 +94,15 @@ parseDateYMD = fromGregorian <$> (parseInt <* char '-')
                              <*> parseInt
 
 parseEnglishMonth :: Parser Int
-parseEnglishMonth = try ( ((\u l1 l2 -> [u,l1,l2]) <$> upper <*> lower <*> lower) >>= H.englishMonth)
+parseEnglishMonth = try ( ((\u l1 l2 -> [u,l1,l2]) <$> upperChar <*> lowerChar <*> lowerChar) >>= H.englishMonth)
 
 -- format HH:MM:SS.XXXXXXXX
 parseTimeMs :: Parser DiffTime
 parseTimeMs = do
     h <- parseInt <* char ':' :: Parser Integer
     m <- parseInt <* char ':' :: Parser Integer
-    s <- many1 digit <* char '.'
-    micro <- many1 digit
+    s <- some digitChar <* char '.'
+    micro <- some digitChar
     let ms :: Double
         ms = read (s ++ "." ++ micro)
         pico = 1000000000000
@@ -76,4 +121,4 @@ parseUnixUser = do
     return (T.pack (first : rst))
 
 hexValue :: Parser Int
-hexValue = foldl' (\c n -> c * 16 + digitToInt n) 0 <$> some hexDigit
+hexValue = foldl' (\c n -> c * 16 + digitToInt n) 0 <$> some hexDigitChar

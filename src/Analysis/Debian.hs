@@ -14,11 +14,8 @@ import Analysis.Parsers
 import Analysis.Oval (ovalRuleMatchedDEB)
 import Data.Oval
 
-import Text.Parser.Token
-import Text.Parser.Char
-import Text.Parser.Combinators
-import Text.Parsec.Text
-import Text.Parsec.Prim (parse)
+import Text.Megaparsec
+import Text.Megaparsec.Char
 import Data.List.Split (splitWhen)
 import Data.Maybe (mapMaybe)
 import qualified Data.Map.Strict as M
@@ -30,7 +27,6 @@ import qualified Data.ByteString as BS
 import qualified Data.Serialize as S
 import Control.Lens
 import Control.Monad
-import Control.Applicative
 import Data.Sequence (Seq)
 import Data.Text (Text)
 import qualified Data.HashMap.Strict as HM
@@ -168,7 +164,7 @@ myparser :: M.Map T.Text (Day, Severity) -> Parser DebInfo
 myparser cvedata = DebInfo . dsaToMap cvedata <$> (many dsa <* eof)
 
 cve :: Parser (Integer, Integer)
-cve = token $ do
+cve = lx $ do
     void $ string "CVE-"
     y <- decimal
     void $ char '-'
@@ -188,37 +184,37 @@ parseDistrib = some (satisfy isAsciiLower) >>= \v -> case v of
                                                          _         -> fail ("Unknown version " <> v)
 
 tol :: Parser ()
-tol = skipMany (satisfy (/= '\n')) *> spaces
+tol = skipMany (satisfy (/= '\n')) *> space
 
 patchInfo :: Parser (Maybe PatchInfo)
 patchInfo = try $ do
     dis <- brackets parseDistrib
     void $ symbolic '-'
-    package <- token $ some (satisfy (not . isSpace))
+    package <- lx $ some (satisfy (not . isSpace))
     notaff <- optional (try $ string "<not-affected>")
-    eol    <- optional (try $ string "<end-of-life>")
-    if has _Nothing notaff && has _Nothing eol
+    ieol   <- optional (try $ string "<end-of-life>")
+    if has _Nothing notaff && has _Nothing ieol
         then do
-            ver <-  (string "<unfixed>" *> pure Nothing)
+            ver <-  (Nothing <$ string "<unfixed>")
                  <|> fmap Just (some (satisfy (not . isSpace)))
             tol
             pure $ Just $ PatchInfo dis (T.pack package) (ver >>= mparseDebianVersion . T.pack)
-        else tol *> pure Nothing
+        else Nothing <$ tol
 
 dsa :: Parser DSA
 dsa = do
     date <- brackets $ do
-        d <- fromInteger <$> token decimal
-        m <- token parseEnglishMonth
-        y <- token decimal
+        d <- fromInteger <$> lx decimal
+        m <- lx parseEnglishMonth
+        y <- lx decimal
         pure (fromGregorian y m d)
-    mdsa <- token $ some (satisfy (\x -> isAsciiUpper x || x == '-' || isDigit x))
-    package <- token $ some (satisfy (not . isSpace))
+    mdsa <- lx $ some (satisfy (\x -> isAsciiUpper x || x == '-' || isDigit x))
+    package <- lx $ some (satisfy (not . isSpace))
     void tol
     let note = try (string "NOTE") *> tol
-    details <- many (   (SC <$> token (braces (many cve)))
-                    <|> (note *> pure NT)
-                    <|> (PA <$> token patchInfo)
+    details <- many (   (SC <$> lx (braces (many cve)))
+                    <|> (NT <$ note)
+                    <|> (PA <$> lx patchInfo)
                     )
     let cves = details ^.. folded . _SC . folded
         ptch = details ^.. folded . _PA . folded

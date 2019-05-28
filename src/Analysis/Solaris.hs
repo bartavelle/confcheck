@@ -16,6 +16,7 @@ module Analysis.Solaris (
 
 import Analysis.Common
 import Analysis.Types
+import Analysis.Parsers
 
 import Prelude
 import Data.Text (Text)
@@ -29,10 +30,8 @@ import Control.Lens
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Control.Monad
-import Text.Parsec.Text
-import Text.Parsec.Char (digit, char, string)
-import Text.Parsec.Prim (parse)
-import Control.Applicative
+import Text.Megaparsec
+import Text.Megaparsec.Char
 import Data.Time (fromGregorian, Day)
 import qualified Data.Sequence as Seq
 import Data.Sequence (Seq)
@@ -77,9 +76,9 @@ _SolPackage = prism' disply getPackageId
 
 parsePatchId :: Parser SolarisPatch
 parsePatchId = do
-    s <- replicateM 6 digit
+    s <- replicateM 6 digitChar
     void (char '-')
-    n <- replicateM 2 digit
+    n <- replicateM 2 digitChar
     return ( SolarisPatch (read s) (read n) )
 
 _SolarisPatch :: Prism' T.Text SolarisPatch
@@ -123,8 +122,8 @@ loadPatchDiag = fmap (mapMaybe parseLine . T.lines) . T.readFile
         getOs x = case T.stripPrefix "Trusted_Solaris_" x of
                       Just t -> TSolaris t
                       Nothing -> Dunno
-        getIdentifier i r = SolarisPatch <$> (read <$> preview (parseFold (replicateM 6 digit)) i)
-                                         <*> (read <$> preview (parseFold (many digit)) r)
+        getIdentifier i r = SolarisPatch <$> (read <$> preview (parseFold (replicateM 6 digitChar)) i)
+                                         <*> (read <$> preview (parseFold (many digitChar)) r)
         prsDate :: T.Text -> Day
         prsDate "" = fromGregorian 1970 1 1
         prsDate t = case T.splitOn "/" t of
@@ -132,9 +131,10 @@ loadPatchDiag = fmap (mapMaybe parseLine . T.lines) . T.readFile
                           _ -> error ("Can't parse date: " <> show t)
         toY y | y > 70 = y + 1900
               | otherwise = y + 2000
-        parseMonth x = case H.englishMonth x of
-                          Just m -> m
-                          Nothing -> error ("Can't parse month: " <> show x)
+        parseMonth x =
+          case H.englishMonth x of
+            Just m -> m
+            Nothing -> error ("Can't parse month: " <> show x)
         parseLine l
             | T.null l = Nothing
             | T.head l == '#' = Nothing
