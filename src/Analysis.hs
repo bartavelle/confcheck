@@ -28,7 +28,7 @@ import Analysis.Common
 import Analysis.Passwd
 import Analysis.LinuxKern
 import Analysis.RPM
-import Analysis.Debian (DebInfo, postDebAnalysis, listDebs)
+import Analysis.Debian (postDebAnalysis, listDebs)
 import Analysis.Solaris
 import Analysis.Files
 import Analysis.Cron
@@ -205,13 +205,12 @@ analyzeMisc lst = lst <> wrongSysctl sysctls
 
 postTarAnalysis :: (UnixVersion
                 -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
-                -> Once (Either CError DebInfo)
                 -> Once [PatchInfo]
                 -> Seq ConfigInfo
                 -> IO (Seq Vulnerability)
-postTarAnalysis dispatchoval dispatchdebs xdiag cinfo = do
+postTarAnalysis dispatchoval xdiag cinfo = do
       rpmvulns <- postRPMAnalysis dispatchoval cinfo
-      debvulns <- postDebAnalysis dispatchoval dispatchdebs cinfo
+      debvulns <- postDebAnalysis dispatchoval cinfo
       solvulns <- postSolarisAnalysis xdiag cinfo
       return $ postAnalysis (fmap ConfigInformation cinfo <> rpmvulns <> solvulns <> debvulns)
 
@@ -219,12 +218,11 @@ analyzeFile :: (Monad m, MonadIO m)
             => AuditFileType
             -> Once [PatchInfo]
             -> (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
-            -> Once (Either CError DebInfo)
             -> Once (IM.IntMap (T.Text, Day))
             -> FilePath
             -> m (Seq Vulnerability)
-analyzeFile tp xdiag dispatchoval dispatchdebs okbd fileLocation =
-    let posta = postTarAnalysis dispatchoval dispatchdebs xdiag
+analyzeFile tp xdiag dispatchoval okbd fileLocation =
+    let posta = postTarAnalysis dispatchoval xdiag
     in  liftIO $ case tp of
                  AuditTarGz   -> runResourceT (analyzeTarGz configExtract fileLocation) >>= posta
                  AuditTar     -> runResourceT (analyzeTar   configExtract fileLocation) >>= posta
@@ -236,13 +234,12 @@ analyzeFile tp xdiag dispatchoval dispatchdebs okbd fileLocation =
 analyzeStream :: AuditFileType
               -> Once [PatchInfo]
               -> (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
-              -> Once (Either CError DebInfo)
               -> Once (IM.IntMap (T.Text, Day))
               -> FilePath
               -> BSL.ByteString
               -> IO (Seq Vulnerability)
-analyzeStream tp xdiag dispatchoval dispatchdebs okbd fileLocation content =
-    let posta = postTarAnalysis dispatchoval dispatchdebs xdiag
+analyzeStream tp xdiag dispatchoval okbd fileLocation content =
+    let posta = postTarAnalysis dispatchoval xdiag
     in  case tp of
           AuditTar     -> runConduit (CL.sourceList (BSL.toChunks content) .| tarAnalyzer configExtract .| CL.foldMap id) >>= posta
           AuditTarGz   -> runConduit (CL.sourceList (BSL.toChunks content) .| CZ.ungzip .| tarAnalyzer configExtract .| CL.foldMap id) >>= posta

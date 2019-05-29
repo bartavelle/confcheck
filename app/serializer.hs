@@ -91,8 +91,7 @@ main = do
     args <- getArgs
     if null args
       then mainF
-      else do
-        undefined
+      else undefined
 
 mainF :: IO ()
 mainF = do
@@ -117,7 +116,11 @@ mainF = do
                          in  BS.writeFile (serialdir <> "/BulletinSearch.serialized") (S.encode lst)
         Left rr -> error rr
 
-    forM_ [ "com.redhat.rhsa-all.xml"
+    forM_ [ "oval-definitions-buster.xml"
+          , "oval-definitions-jessie.xml"
+          , "oval-definitions-stretch.xml"
+          , "oval-definitions-wheezy.xml"
+          , "com.redhat.rhsa-all.xml"
           , "com.ubuntu.trusty.cve.oval.xml"
           , "com.ubuntu.xenial.cve.oval.xml"
           , "suse.linux.enterprise.server.11.xml"
@@ -127,9 +130,7 @@ mainF = do
           , "opensuse.13.1.xml"
           ] $ \f -> do
         putStrLn ("Serializing " ++ f)
-        (oval, tests) <- parseOvalFile (fromString (sourcedir <> "/" <> f)) >>= \e -> case e of
-                                                                                          Right v -> return v
-                                                                                          Left rr -> error rr
+        (oval, tests) <- parseOvalFile (fromString (sourcedir <> "/" <> f)) >>= either error pure
         let eoval | "suse.linux" `isPrefixOf` f = enrichOval cves oval
                   | "opensuse."  `isPrefixOf` f = enrichOval cves oval
                   | otherwise = oval

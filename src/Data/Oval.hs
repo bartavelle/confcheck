@@ -47,6 +47,7 @@ import Text.Read (readMaybe)
 import Data.Parsers.Xml
 import Data.Condition
 import Analysis.Types
+import Debug.Trace
 
 newtype ObjectId = ObjectId T.Text
                    deriving (Show, Eq, Hashable)
@@ -84,10 +85,11 @@ instance Serialize OvalStateOp where
 
 data OvalTest = RpmInfoT !OTestId !ObjectId !StateId
               | FamilyT !OTestId !ObjectId !StateId
-              | UnameT !OTestId !ObjectId !StateId
+              | UnameT !OTestId !ObjectId
               | UnknownT
               | DpkgInfoT !OTestId !ObjectId !(Maybe StateId)
               | Unhandled !OTestId !ObjectId !StateId !TestDetails
+              | TestAlways !OTestId !Bool
               deriving Show
 
 data TestDetails
@@ -121,7 +123,7 @@ data OvalStateOp
 
 data TestType
     = RpmState       !RPMVersion
-    | DpkgState      !T.Text !T.Text
+    | DpkgState      !(Maybe T.Text) !T.Text
     | Version        !T.Text
     | SignatureKeyId !T.Text
     | FamilyIs       !T.Text
@@ -129,6 +131,7 @@ data TestType
     | Exists
     | MiscTest       !T.Text !T.Text
     | Arch           !T.Text
+    | TTBool         !Bool
     deriving (Show, Generic, Eq)
 
 data OFullTest
@@ -181,7 +184,8 @@ definition = lx $ element "definition" $ \args ->
           refs' <- lx $ many (lx $ element "reference" (\mp -> OReference <$> extractParameter "source" mp
                                                                           <*> extractParameter "ref_id" mp
                                                                           <*> extractParameter "ref_url" mp))
-          desc' <- maybe (lx $ getTextFrom "description") pure desc1
+          desc' <- maybe (lx $ getTextFrom0 "description") pure desc1
+          lx $ void $ optional $ ignoreElement "debian" -- TODO, there is a better description in this
           msev' <- optional $ lx $ element_ "advisory" $ do
               cnt <- lx $ optional $ getTextFrom0 "severity"
               let ignoredElementsTags
@@ -203,8 +207,8 @@ definition = lx $ element "definition" $ \args ->
                   mkDate dt = case mapM (readMaybe . T.unpack . T.takeWhile (/= ' ')) (T.splitOn "-" dt) of
                                   Just [y,m,d] -> pure $ fromGregorian y (fromIntegral m) (fromIntegral d)
                                   _ -> fail ("Can't parse date " <> show dt)
-              mdays <- many (    (const Nothing <$> lx ignoredElements)
-                             <|> (Just          <$> lx parsedDate))
+              mdays <- many (    (Nothing <$ lx ignoredElements)
+                             <|> (Just    <$> lx parsedDate))
               sev <- case cnt of
                        Nothing -> pure Unknown
                        Just txt -> either fail return (translateCriticity txt)
@@ -218,27 +222,41 @@ definition = lx $ element "definition" $ \args ->
       return $! Just $! OvalDefinition defid title refs desc crit sev (P.sourceLine p) res
 
 object :: Parser OvalObject
-object = lx (rpmObject <|> dpkgInfoObject <|> familyObject <|> unameObject <|> releaseCodenameObject)
+object = lx (rpmObject <|> dpkgInfoObject <|> familyObject <|> unameObject <|> textFileContentObject <|> releaseCodenameObject)
 
 dpkgInfoObject :: Parser OvalObject
-dpkgInfoObject = element "dpkginfo_object"
-  $ \mp -> DpkgO <$> (ObjectId <$> extractParameter "id" mp)
-                 <*> lx (getTextFrom "name")
+dpkgInfoObject = element "dpkginfo_object" $ \mp -> do
+  oid <- objectId mp
+  nm <- lx $ getTextFrom0 "name"
+  if T.null nm
+    then DpkgO oid "????" <$ traceM ("Warning, empty object name for oid " ++ show oid)
+    else pure $ DpkgO oid nm
+
+textFileContentObject :: Parser OvalObject
+textFileContentObject = element "textfilecontent54_object" $ \mp -> do
+  pth <- lx $ getTextFrom0 "path"
+  fname <- lx $ getTextFrom0 "filename"
+  ptrn <- lx $ getTextFrom0 "pattern"
+  inst <- lx $ getTextFrom0 "instance"
+  case (pth, fname, ptrn, inst) of
+    ("/etc", "debian_version", "(\\d+)\\.\\d", "1") -> ReleaseCodenameO <$> objectId mp
+    ("/etc", "lsb-release", _, "1") -> ReleaseCodenameO <$> objectId mp
+    _ -> fail "?!?"
 
 releaseCodenameObject :: Parser OvalObject
 releaseCodenameObject = anyElement $ \ename mp -> do
   comment <- extractParameter "comment" mp
-  oid <- ObjectId <$> extractParameter "id" mp
+  oid <- objectId mp
   ignoreNested []
   case comment of
     "The singleton release codename object." -> return (ReleaseCodenameO oid)
     _ -> fail ("Unknown object " ++ T.unpack comment ++ " in object " ++ T.unpack ename)
 
 familyObject :: Parser OvalObject
-familyObject = element "family_object" $ \mp -> UnameO <$> (ObjectId <$> extractParameter "id" mp)
+familyObject = element "family_object" $ fmap UnameO . objectId
 
 unameObject :: Parser OvalObject
-unameObject = element "uname_object" $ \mp -> UnameO <$> (ObjectId <$> extractParameter "id" mp)
+unameObject = element "uname_object" $ fmap UnameO . objectId
 
 rpmObject :: Parser OvalObject
 rpmObject = element "rpminfo_object"
@@ -248,12 +266,18 @@ rpmObject = element "rpminfo_object"
 test :: Parser OvalTest
 test = lx (rpmtest <|> dpkgInfoTest <|> familyTest <|> unameTest <|> unknownTest <|> unhandledTest)
 
+withid :: (OTestId -> Parser a) -> HM.HashMap T.Text T.Text -> Parser a
+withid a mp = fmap OTestId (extractParameter "id" mp) >>= a
+objectId :: HM.HashMap T.Text T.Text -> Parser ObjectId
+objectId = fmap ObjectId . extractParameter "id"
+objectRef :: Parser ObjectId
+objectRef = ObjectId <$> lx ( element "object" (extractParameter "object_ref") )
+stateRef :: Parser StateId
+stateRef = StateId  <$> lx ( element "state"  (extractParameter "state_ref") )
+
 genTest :: T.Text -> (OTestId -> ObjectId -> StateId -> a) -> Parser a
-genTest t c = element t $ \mp -> do
-  rid <- OTestId <$> extractParameter "id" mp
-  objid <- ObjectId <$> lx ( element "object" (extractParameter "object_ref") )
-  sttid <- StateId  <$> lx ( element "state"  (extractParameter "state_ref") )
-  return (c rid objid sttid)
+genTest t c = element t $ withid $ \rid ->
+  c rid <$> objectRef <*> stateRef
 
 rpmtest :: Parser OvalTest
 rpmtest = genTest "rpminfo_test" RpmInfoT
@@ -264,26 +288,32 @@ unknownTest = UnknownT <$ ignoreElement "unknown_test"
 unhandledTest :: Parser OvalTest
 unhandledTest = anyElement $ \ename mp -> do
   rid <- OTestId <$> extractParameter "id" mp
-  objid <- ObjectId <$> lx ( element "object" (extractParameter "object_ref") )
-  sttid <- StateId  <$> lx ( element "state"  (extractParameter "state_ref") )
+  objid <- objectRef
+  sttid <- stateRef
   details <- TestDetails ename <$> extractParameter "check" mp
                                <*> extractParameter "check_existence" mp
                                <*> extractParameter "comment" mp
-  return (Unhandled rid objid sttid details)
-
+  pure $ if _tdComment details `elem`
+                  [ "Is the host running Ubuntu trusty?"
+                  , "Is the host running Ubuntu xenial?"
+                  , "Debian GNU/Linux 10 is installed"
+                  , "Debian GNU/Linux 9 is installed"
+                  , "Debian GNU/Linux 8 is installed"
+                  , "Debian GNU/Linux 7 is installed"
+                  ]
+             then TestAlways rid True
+             else Unhandled rid objid sttid details
 
 familyTest :: Parser OvalTest
 familyTest = genTest "family_test" FamilyT
 
 unameTest :: Parser OvalTest
-unameTest = genTest "uname_test" UnameT
+unameTest = element "uname_test" $ withid $ \rid ->
+  UnameT rid <$> objectRef
 
 dpkgInfoTest :: Parser OvalTest
-dpkgInfoTest = element "dpkginfo_test" $ \mp -> do
-  rid <- OTestId <$> extractParameter "id" mp
-  objid <- ObjectId <$> lx ( element "object" (extractParameter "object_ref") )
-  sttid <- optional (StateId  <$> lx ( element "state"  (extractParameter "state_ref") ))
-  return (DpkgInfoT rid objid sttid)
+dpkgInfoTest = element "dpkginfo_test" $ withid $ \rid -> 
+  DpkgInfoT rid <$> objectRef <*> optional stateRef
 
 extractOperation :: T.Text -> Parser Operation
 extractOperation "less than" = pure LessThan
@@ -304,7 +334,7 @@ state = lx $ anyElement $ \ename mp -> do
       ignoreNested []
       return (OvalState sid (OvalStateOp (UnameIs ver) Equal))
     "dpkginfo_state" -> do
-      nm <- lx (getTextFrom "name")
+      nm <- lx (optional (getTextFrom "name"))
       lx $ element "evr" $ \emap -> do
         dt <- extractParameter "datatype" emap
         unless (dt == "debian_evr_string") (fail "Only debian_evr_string datatype is supported")
@@ -357,33 +387,33 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
                               Nothing -> Left ("Could not lookup " <> show t)
         mkTest :: OvalTest -> Either String (Maybe (OTestId, OFullTest))
         mkTest t = case t of
+          TestAlways testid b -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool b) Equal))
           RpmInfoT testid objectid stateid   -> go testid objectid stateid
           FamilyT testid objectid stateid    -> go testid objectid stateid
-          UnameT testid objectid stateid     -> go testid objectid stateid
-          DpkgInfoT testid objectid mstateid -> do
-            obj <- getFromMap objectid omap
-            top <- maybe (pure (OvalStateOp Exists Equal)) (`getFromMap` smap) mstateid
-            pure $ Just (testid, OFullTest obj top)
+          UnameT testid objectid             -> mgo testid objectid Nothing
+          DpkgInfoT testid objectid mstateid -> mgo testid objectid mstateid
           UnknownT -> pure Nothing
-          Unhandled _ _ _ details ->
-            if _tdComment details `elem`
-                  [ "Is the host running Ubuntu trusty?"
-                  , "Is the host running Ubuntu xenial?"
-                  ]
-              then Right Nothing
-              else Left ("Unknown test " ++ show t)
+          Unhandled{} -> Left ("Unknown test " ++ show t)
          where
             go testid objectid stateid = do
               obj <- getFromMap objectid omap
               top <- getFromMap stateid smap
+              when (T.null obj) (traceShowM top)
               pure $ Just (testid, OFullTest obj top)
+            mgo testid objectid mstateid = do
+              obj <- getFromMap objectid omap
+              case mstateid of
+                Nothing | T.null obj -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool True) Equal))
+                _ -> do
+                  top <- maybe (pure (OvalStateOp Exists Equal)) (`getFromMap` smap) mstateid
+                  pure $ Just (testid, OFullTest obj top)
         omap = HM.fromList $ map mkov objects
         mkov o = case o of
-                   RpmO oid t  -> (oid, t)
-                   DpkgO oid t -> (oid, t)
-                   FamilyO oid -> (oid, mempty)
-                   UnameO oid  -> (oid, mempty)
-                   ReleaseCodenameO oid -> (oid, mempty)
+                   RpmO oid t  -> if T.null t then error (show oid) else (oid, t)
+                   DpkgO oid t -> if T.null t then error (show oid) else (oid, t)
+                   FamilyO oid -> (oid, "")
+                   UnameO oid  -> (oid, "")
+                   ReleaseCodenameO oid -> (oid, "")
         smap :: HM.HashMap StateId OvalStateOp
         smap = HM.fromList $ map (\(OvalState sid top) -> (sid, top)) states
 

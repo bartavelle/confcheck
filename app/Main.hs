@@ -4,7 +4,6 @@ import Analysis
 import Analysis.Types
 import Analysis.Oval
 import Analysis.Solaris
-import Analysis.Debian
 import Analysis.Common
 import Data.Microsoft
 
@@ -28,9 +27,11 @@ main = do
     os132oval  <- mkOnce (loadOvalSerialized "serialized/opensuse.13.2.xml")
     ubuntu1404 <- mkOnce (loadOvalSerialized "serialized/com.ubuntu.trusty.cve.oval.xml")
     ubuntu1604 <- mkOnce (loadOvalSerialized "serialized/com.ubuntu.xenial.cve.oval.xml")
-    let cveserial = "serialized/cve.cereal"
-    debian <- mkOnce (loadDebVulns cveserial "source/debian-dsa")
-    okbd <- mkOnce (loadKBDays ("serialized/BulletinSearch.serialized"))
+    deb7       <- mkOnce (loadOvalSerialized "serialized/oval-definitions-wheezy.xml")
+    deb8       <- mkOnce (loadOvalSerialized "serialized/oval-definitions-jessie.xml")
+    deb9       <- mkOnce (loadOvalSerialized "serialized/oval-definitions-stretch.xml")
+    deb10      <- mkOnce (loadOvalSerialized "serialized/oval-definitions-buster.xml")
+    okbd <- mkOnce (loadKBDays "serialized/BulletinSearch.serialized")
     let ov v = case v of
                    UnixVersion SuSE (11:_)     -> Just s11oval
                    UnixVersion RedHatLinux _   -> Just rhoval
@@ -41,13 +42,17 @@ main = do
                    UnixVersion OpenSuSE [13,2] -> Just os132oval
                    UnixVersion Ubuntu [14,4]   -> Just ubuntu1404
                    UnixVersion Ubuntu [16,4]   -> Just ubuntu1604
+                   UnixVersion Debian [7,_]    -> Just deb7
+                   UnixVersion Debian [8,_]    -> Just deb8
+                   UnixVersion Debian [9,_]    -> Just deb9
+                   UnixVersion Debian [10,_]   -> Just deb10
                    _ -> trace ("Unknown os " ++ show v) Nothing
     args <- getArgs
     case args of
       "csv":rargs -> do
-        res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov debian okbd) rargs
+        res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) rargs
         BSL.putStrLn (encode (map toRecord (F.toList res)))
-      _ -> mapM_ (analyzeFile AuditTarGz xdiag ov debian okbd >=> mapM_ print) args
+      _ -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> mapM_ print) args
 
 toRecord :: Vulnerability -> [String]
 toRecord v

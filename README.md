@@ -31,6 +31,11 @@ do
   wget -O opensuse.$v.xml http://support.novell.com/security/oval/opensuse.$v.xml
 done
 
+for v in buster jessie stretch wheezy
+do
+  wget https://www.debian.org/security/oval/oval-definitions-"$v".xml
+done
+
 wget -O suse.linux.enterprise.12.xml http://support.novell.com/security/oval/suse.linux.enterprise.12.xml
 wget -O suse.linux.enterprise.server.10.xml http://support.novell.com/security/oval/suse.linux.enterprise.server.10.xml
 wget -O suse.linux.enterprise.server.11.xml http://support.novell.com/security/oval/suse.linux.enterprise.server.11.xml

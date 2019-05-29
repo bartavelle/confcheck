@@ -19,7 +19,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Text.Regex.PCRE.ByteString.Utils
 import Data.List (intercalate)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, fromMaybe)
 import Data.DebianVersion
 
 import Data.Condition
@@ -76,7 +76,7 @@ ovalRuleMatched :: UnixVersion
                 -> HM.HashMap OTestId OFullTest
                 -> OvalDefinition
                 -> (Bool, [(T.Text, Either DebianVersion RPMVersion)])
-ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests = tolst . matchingConditions check' . view ovalCond
+ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests vl = tolst . matchingConditions check' . view ovalCond $ vl
     where
         tolst Nothing = (False, [])
         tolst (Just lst) = (True, concat lst)
@@ -111,12 +111,14 @@ ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests = tolst . matchingCon
                             guard (rv < v)
                             return [(object, Right v)]
                           Exists | operation == Equal -> ([] <$ M.lookup object rpms) <|> ([] <$ M.lookup object debs)
-                          DpkgState sourcename rawversion | operation == LessThan -> do
+                          DpkgState msourcename rawversion | operation == LessThan -> do
                             v <- either (const Nothing) Just (parseDebianVersion rawversion)
-                            (packagename, rv) <- M.lookup sourcename debs
+                            let sourcename = fromMaybe object msourcename
+                            (packagename, rv) <- sourcename `M.lookup` debs
                             guard (rv < v)
                             return [(packagename, Left v)]
-                          Arch architectures | operation == PatternMatch -> do
+                          TTBool b -> [] <$ guard b
+                          Arch architectures | operation == PatternMatch ->
                             case compile' compBlank execBlank (T.encodeUtf8 architectures) of
                               Left _ -> error ("Could not compile this regexp: " <> show architectures)
                               Right regexp -> case execute' regexp (T.encodeUtf8 arch) of
