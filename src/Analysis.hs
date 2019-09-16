@@ -70,6 +70,7 @@ import Control.Monad.Trans.Resource (runResourceT)
 import Data.String (fromString)
 import Data.Text (Text)
 import Data.Sequence (Seq)
+import Control.Dependency (guardResult)
 
 data RegroupedVulnerability = RV (Seq Vulnerability)
                             | RPack (M.Map RPMVersion PackageUniqInfo)
@@ -170,7 +171,7 @@ configExtract = map (R.Once,) once <> map (R.Reset,) reset
              : anaNetstat
              : anaFilesNG
              : anaFilesOld
-             : (anaIpaddr <|> anaIfconfig)
+             : (nn anaIpaddr <|> nn anaIfconfig)
              : anaSysctl
              : anaKernel
              : listRPMs
@@ -178,6 +179,7 @@ configExtract = map (R.Once,) once <> map (R.Reset,) reset
              : anaSssd
              : getHostname
              : analyzePasswdfile
+        nn = guardResult (not . null)
 
 getHostname :: Analyzer (Seq ConfigInfo)
 getHostname = Seq.singleton . Hostname <$> (requireTxtS "etc/hostname" <|> requireTxtS "etc/HOSTNAME" <|> fmap extraHNline (requireTxtS "etc/sysconfig/network") )
