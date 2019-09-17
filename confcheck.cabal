@@ -114,6 +114,8 @@ executable confcheck-exe
                      , cassava
                      , text
                      , bytestring
+                     , optparse-applicative
+                     , lens
   default-language:    Haskell2010
 
 test-suite confcheck-test

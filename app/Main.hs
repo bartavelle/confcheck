@@ -9,16 +9,42 @@ import Data.Microsoft
 
 import Debug.Trace
 
-import System.Environment
-import Control.Monad
-import Data.Csv (encode)
+import           Control.Lens
+import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import           Data.Csv (encode)
 import qualified Data.Foldable as F
 import qualified Data.Text as T
+import           Options.Applicative
+
 import Prelude
+
+data Options = Options RunMode [FilePath]
+    deriving Show
+
+data RunMode
+    = Standard
+    | CSV
+    | Patches
+    deriving (Show, Eq, Ord, Enum, Bounded)
+
+options :: Parser Options
+options = Options <$> runmode <*> some file
+  where
+    parseMode = maybeReader $ \s ->
+      case s of
+        "csv"      -> Just CSV
+        "patches"  -> Just Patches
+        "standard" -> Just Standard
+        _          -> Nothing
+    runmode = option parseMode (long "mode" <> short 'm' <> value Standard <> help "Mode, valid values are standard, csv and patches")
+    file = strArgument (help "Files to analyze" <> metavar "FILE")
 
 main :: IO ()
 main = do
+    let commandParser = info (options <**> helper)
+                             (fullDesc <> progDesc "Analyzes configuration dumps" <> header "confcheck-exe - analyze configuration dumps")
+    Options runmode files <- execParser commandParser
     xdiag      <- mkOnce (loadPatchDiag "source/patchdiag.xref")
     rhoval     <- mkOnce (loadOvalSerialized "serialized/com.redhat.rhsa-all.xml")
     s11oval    <- mkOnce (loadOvalSerialized "serialized/suse.linux.enterprise.server.11.xml")
@@ -47,12 +73,18 @@ main = do
                    UnixVersion Debian [9,_]    -> Just deb9
                    UnixVersion Debian [10,_]   -> Just deb10
                    _ -> trace ("Unknown os " ++ show v) Nothing
-    args <- getArgs
-    case args of
-      "csv":rargs -> do
-        res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) rargs
+    case runmode of
+      CSV -> do
+        res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) files
         BSL.putStrLn (encode (map toRecord (F.toList res)))
-      _ -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> mapM_ print) args
+      Patches -> do
+        res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) files
+        let missings = res ^.. traverse . _Vulnerability . aside _OutdatedPackage
+            toPatchRecord (sev, (titre, installed, patched, pub, _))
+              = [show pub, show sev, T.unpack titre, T.unpack installed, T.unpack patched]
+
+        BSL.putStrLn (encode (map toPatchRecord (F.toList missings)))
+      Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> mapM_ print) files
 
 toRecord :: Vulnerability -> [String]
 toRecord v
