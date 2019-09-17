@@ -152,6 +152,7 @@ parseWindowsVersion p =
     case p of
         "Windows 7 Professional Service Pack 1" -> Just (UnixVersion (WindowsClient "7 pro") [1])
         "Windows Server 2008 R2 Standard Service Pack 1" -> Just (UnixVersion (WindowsServer "2008 R2") [1])
+        "Microsoft Windows Server 2012 R2 Standard" -> Just (UnixVersion (WindowsServer "2012 R2") [])
         "Microsoft Windows 7 Professionnel" -> Just (UnixVersion (WindowsClient "7 pro") [])
         "Microsoft Windows XP Service Pack 2" -> Just (UnixVersion (WindowsClient "XP") [2])
         "Microsoft® Windows Vista\153 Professionnel" -> Just (UnixVersion (WindowsClient "Vista pro") [])
