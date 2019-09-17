@@ -120,11 +120,11 @@ mainF = do
                          in  BS.writeFile (serialdir <> "/BulletinSearch.serialized") (S.encode lst)
         Left rr -> error rr
 
-    forM_ [ "oval-definitions-buster.xml"
+    forM_ [ "com.redhat.rhsa-all.xml"
+          , "oval-definitions-buster.xml"
           , "oval-definitions-jessie.xml"
           , "oval-definitions-stretch.xml"
           , "oval-definitions-wheezy.xml"
-          , "com.redhat.rhsa-all.xml"
           , "com.ubuntu.trusty.cve.oval.xml"
           , "com.ubuntu.xenial.cve.oval.xml"
           , "suse.linux.enterprise.server.11.xml"

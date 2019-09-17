@@ -162,6 +162,7 @@ translateCriticity t =
       ""           -> Right Unknown
       "Not set"    -> Right Unknown
       "Negligible" -> Right None
+      "None"       -> Right None
       "Low"        -> Right Low
       "Medium"     -> Right Medium
       "Moderate"   -> Right Medium
