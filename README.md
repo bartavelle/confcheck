@@ -20,7 +20,7 @@ In the `confcheck` directory,
 ```
 mkdir sources serialized
 cd sources
-for d in 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018
+for d in 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019
 do
    wget -O- http://static.nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-$d.xml.gz  | gunzip > nvdcve-2.0-$d.xml
 done

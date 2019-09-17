@@ -28,6 +28,7 @@ import Data.CaseInsensitive (mk)
 import Control.Concurrent.ParallelIO (parallel)
 import Control.DeepSeq (deepseq)
 import System.Environment
+import Data.Time (getZonedTime, ZonedTime(..), LocalTime(..), toGregorian)
 
 import Analysis.Types
 import Analysis.Common
@@ -43,14 +44,17 @@ lNode t = nodes . traverse . _Element . named (mk t)
 
 
 loadCVE :: FilePath -> IO (M.Map T.Text (Day, Severity))
-loadCVE sourcedir = M.fromList . concat <$> parallel (map loadCVE' [2002..2017])
+loadCVE sourcedir = do
+      ZonedTime (LocalTime today _) _ <- getZonedTime
+      let (currentYear, _, _) = toGregorian today
+      M.fromList . concat <$> parallel (map loadCVE' [2002..currentYear])
     where
         loadCVE' y = do
             o <- extractCVE <$> loadYear y
             o `deepseq` hPutStrLn stderr ("Loading CVSS for year " <> show y)
             return o
-        loadYear :: Int -> IO Document
-        loadYear y = XML.readFile def (fromString (sourcedir <> "/nvdcve-2.0-" <> show y <> ".xml"))
+        loadYear :: Integer -> IO Document
+        loadYear year = XML.readFile def (fromString (sourcedir <> "/nvdcve-2.0-" <> show year <> ".xml"))
         readScore t = case T.double t of
                           Right (v, "") -> CVSS v
                           _ -> Unknown
