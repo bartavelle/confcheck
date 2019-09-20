@@ -218,7 +218,7 @@ definition = lx $ element "definition" $ \args ->
                                     _ -> fromGregorian 1970 1 1
           return (title', refs', desc', msev')
       P.skipMany $ ignoreElement "notes"
-      crit <- criteria
+      crit <- criteria <|> pure (Always False)
       let (sev, res) = fromMaybe (Unknown, fromGregorian 1970 1 1) msev
       return $! Just $! OvalDefinition defid title refs desc crit sev (P.sourceLine p) res
 
@@ -372,6 +372,7 @@ parsedoc = lx $ element_ "oval_definitions" $ do
   tsts <- lx (element_ "tests" (many test))
   objs <- lx (element_ "objects" (many object))
   stts <- lx (element_ "states" (many state))
+  void $ lx $ optional $ ignoreElement "variables" -- TODO, check what this is, this is for ubuntu xenial
   return (defs, tsts, objs, stts)
 
 parseOvalStream :: FilePath -> BSL.ByteString -> Either String ([OvalDefinition], HM.HashMap OTestId OFullTest)
