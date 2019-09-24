@@ -45,7 +45,7 @@ main = do
     let commandParser = info (options <**> helper)
                              (fullDesc <> progDesc "Analyzes configuration dumps" <> header "confcheck-exe - analyze configuration dumps")
     Options runmode files <- execParser commandParser
-    xdiag      <- mkOnce (loadPatchDiag "source/patchdiag.xref")
+    xdiag      <- mkOnce (loadPatchDiag "sources/patchdiag.xref")
     rhoval     <- mkOnce (loadOvalSerialized "serialized/com.redhat.rhsa-all.xml")
     s11oval    <- mkOnce (loadOvalSerialized "serialized/suse.linux.enterprise.server.11.xml")
     os122oval  <- mkOnce (loadOvalSerialized "serialized/opensuse.12.2.xml")
