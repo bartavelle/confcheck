@@ -1,33 +1,34 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 module Analysis.Debian (listDebs, postDebAnalysis, loadSerializedCVE) where
 
-import Prelude
-import Analysis.Common
-import Analysis.Types
-import Analysis.Oval (ovalRuleMatchedDEB)
-import Data.Oval
+import           Analysis.Common
+import           Analysis.Oval       (ovalRuleMatchedDEB)
+import           Analysis.Types
+import           Data.Oval
 
-import Data.List.Split (splitWhen)
-import Data.Maybe (mapMaybe)
-import qualified Data.Map.Strict as M
-import qualified Data.Text as T
-import qualified Data.ByteString as BS
-import qualified Data.Serialize as S
-import Control.Lens
-import Control.Monad
-import Data.Sequence (Seq)
-import Data.Text (Text)
+import           Control.Lens
+import           Control.Monad
+import qualified Data.ByteString     as BS
+import           Data.Char
+import           Data.DebianVersion
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Sequence as Seq
-import Data.Char
-import Data.Time.Calendar
-import Data.DebianVersion
+import           Data.List.Split     (splitWhen)
+import qualified Data.Map.Strict     as M
+import           Data.Maybe          (mapMaybe)
+import           Data.Sequence       (Seq)
+import qualified Data.Sequence       as Seq
+import qualified Data.Serialize      as S
+import           Data.Text           (Text)
+import qualified Data.Text           as T
+import           Data.Time.Calendar
+
+import           Prelude
 
 loadSerializedCVE :: FilePath -> IO (M.Map T.Text (Day, Severity))
 loadSerializedCVE cveserial = do

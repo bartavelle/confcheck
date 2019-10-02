@@ -1,11 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Analysis.DebianJson where
 
-import Data.Aeson
+import           Control.Lens
+import           Data.Aeson
 import qualified Data.HashMap.Strict as HM
-import Data.Text (Text)
-import Control.Lens
-import Prelude
+import           Data.Text           (Text)
+
+import           Prelude
 
 type AllEntries = HM.HashMap Package CVEs
 type CVEs = HM.HashMap Text CVEInfo
@@ -29,14 +30,14 @@ data DUrgency = MediumS | HighS | Low | Unimportant | EOL | NotYetAssigned | Low
 
 
 instance ToJSON DScope where
-    toJSON Local = "local"
+    toJSON Local  = "local"
     toJSON Remote = "remote"
 
 instance FromJSON DScope where
     parseJSON = withText "scope" $ \s -> case s of
                                               "local"  -> pure Local
                                               "remote" -> pure Remote
-                                              _ -> fail (show s)
+                                              _        -> fail (show s)
 
 type ReleaseName = Text
 type Package = Text

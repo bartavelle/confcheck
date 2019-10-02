@@ -1,30 +1,30 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TupleSections     #-}
 
 module Analysis.TarStream (analyzeTar, analyzeTarGz, tarAnalyzer) where
 
-import Data.Conduit
-import qualified Data.Conduit.List      as CL
-import qualified Data.Conduit.Binary    as CB
-import qualified Data.Conduit.Zlib      as CZ
-import qualified Data.Conduit.Tar       as CT
-import qualified Data.ByteString        as BS
-import qualified Data.Text              as T
-import qualified Data.Text.Encoding     as TE
-import Control.Monad.Primitive (PrimMonad)
-import Control.Lens
-import Control.Monad.Trans.Resource (MonadResource)
-import Control.Monad.Catch
+import           Control.Lens
+import           Control.Monad.Catch
+import           Control.Monad.Primitive      (PrimMonad)
+import           Control.Monad.Trans.Resource (MonadResource)
+import qualified Data.ByteString              as BS
+import           Data.Conduit
+import qualified Data.Conduit.Binary          as CB
+import qualified Data.Conduit.List            as CL
+import qualified Data.Conduit.Tar             as CT
+import qualified Data.Conduit.Zlib            as CZ
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as TE
 
-import Control.Dependency
-import Data.Conduit.Require
+import           Control.Dependency
+import           Data.Conduit.Require
 
 nestedTarProducer :: (MonadThrow m, PrimMonad m) => ConduitT BS.ByteString ([T.Text], BS.ByteString) m ()
 nestedTarProducer = CT.untar $ \hdr -> case CT.fileType hdr of
                                         CT.FTNormal -> extract hdr
-                                        _ -> return ()
+                                        _           -> return ()
     where
         extract hdr | ".tar.gz" `T.isSuffixOf` path = tgz
                     | ".tgz"    `T.isSuffixOf` path = tgz

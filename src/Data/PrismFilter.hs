@@ -1,9 +1,10 @@
 {-# LANGUAGE RankNTypes #-}
 module Data.PrismFilter where
 
-import Prelude
 import qualified Control.Foldl as F
-import Control.Lens
+import           Control.Lens
+
+import           Prelude
 
 maybeFold :: (Applicative m, Monoid (m b)) => (a -> Maybe b) -> F.Fold a (m b)
 maybeFold f = F.foldMap (maybe mempty pure . f) id

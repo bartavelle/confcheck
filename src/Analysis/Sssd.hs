@@ -1,21 +1,21 @@
 module Analysis.Sssd (anaSssd) where
 
-import Analysis.Types
-import Analysis.Common
-import Data.Serialize.Tdb
-import Control.Dependency
+import           Analysis.Common
+import           Analysis.Types
+import           Control.Dependency
+import           Data.Serialize.Tdb
 
-import qualified Data.Sequence as Seq
-import qualified Data.ByteString as BS
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
+import qualified Data.ByteString     as BS
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
-import qualified Data.Set as S
-import Control.Applicative
-import Control.Lens
-import Control.Monad
-import Data.List (foldl')
-import Data.Text (Text)
-import Data.Sequence (Seq)
+import           Data.List           (foldl')
+import           Data.Sequence       (Seq)
+import qualified Data.Sequence       as Seq
+import qualified Data.Set            as S
+import           Data.Text           (Text)
+import qualified Data.Text           as T
 
 data TdbData = UID Int Text
              | GID Int [Text]
@@ -41,7 +41,7 @@ tdbData2Config = fixgroups . foldl' (flip t') ([], [], [])
                 grps = map mkGroup grpn
                 mkGroup (gid, members) = GroupEntry (nmmap ^. at gid . non (T.pack (show gid))) gid (S.fromList (map mkMember members))
                 mkMember x = case "name=" `T.stripPrefix` x of
-                                 Just l -> T.takeWhile (/= ',') l
+                                 Just l  -> T.takeWhile (/= ',') l
                                  Nothing -> x
         t' (RAW c) (cfg, grpn, gids) = (c : cfg, grpn, gids)
         t' Uninteresting x = x
@@ -66,7 +66,7 @@ analyzeTdb x = case tdbEntries x of
 
 analyzeEntry :: BS.ByteString -> TdbData
 analyzeEntry x = case parseElems x of
-                     Left rr -> RAW (parseError ("analyzeEntry " <> rr))
+                     Left rr     -> RAW (parseError ("analyzeEntry " <> rr))
                      Right (k,v) -> analyzeKV k v
 
 analyzeKV :: BS.ByteString -> HM.HashMap BS.ByteString (HM.HashMap BS.ByteString [BS.ByteString]) -> TdbData

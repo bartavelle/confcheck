@@ -1,18 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Analysis.Ipaddr (anaIpaddr) where
 
-import Analysis.Types
-import Analysis.Common
-import Analysis.Parsers
+import           Analysis.Common
+import           Analysis.Parsers
+import           Analysis.Types
 
 import           Control.Lens
 import           Control.Monad
-import           Data.List (foldl')
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import           Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Vector as V
+import           Data.List                  (foldl')
+import           Data.Sequence              (Seq)
+import qualified Data.Sequence              as Seq
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
+import qualified Data.Vector                as V
 import           Network.IP.Addr
 import           Text.Megaparsec
 import           Text.Megaparsec.Char

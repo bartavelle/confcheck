@@ -1,5 +1,5 @@
+{-# LANGUAGE RankNTypes      #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE RankNTypes #-}
 module Analysis.Solaris (
     anaShowRev
   , anaPkgInfo
@@ -14,29 +14,30 @@ module Analysis.Solaris (
   , patchRequires
   ) where
 
-import Analysis.Common
-import Analysis.Types
-import Analysis.Parsers
+import           Analysis.Common
+import           Analysis.Parsers
+import           Analysis.Types
 
-import Prelude
-import Data.Text (Text)
-import Data.List
-import Data.Set (Set)
-import Data.Set.Lens
-import qualified Data.Set as S
-import qualified Data.Map.Strict as M
-import Data.Maybe (mapMaybe,fromMaybe)
-import Control.Lens
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import Control.Monad
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import Data.Time (fromGregorian, Day)
-import qualified Data.Sequence as Seq
-import Data.Sequence (Seq)
-import qualified Data.Foldable as F
+import           Control.Lens
+import           Control.Monad
+import qualified Data.Foldable        as F
+import           Data.List
+import qualified Data.Map.Strict      as M
+import           Data.Maybe           (fromMaybe, mapMaybe)
 import qualified Data.Parsers.Helpers as H
+import           Data.Sequence        (Seq)
+import qualified Data.Sequence        as Seq
+import           Data.Set             (Set)
+import qualified Data.Set             as S
+import           Data.Set.Lens
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import qualified Data.Text.IO         as T
+import           Data.Time            (Day, fromGregorian)
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
+
+import           Prelude
 
 data PatchFlag = Recommended
                | Security
@@ -120,7 +121,7 @@ loadPatchDiag = fmap (mapMaybe parseLine . T.lines) . T.readFile
         getOs "8_x86" = Solaris 8 (Just ArchX86)
         getOs "7_x86" = Solaris 7 (Just ArchX86)
         getOs x = case T.stripPrefix "Trusted_Solaris_" x of
-                      Just t -> TSolaris t
+                      Just t  -> TSolaris t
                       Nothing -> Dunno
         getIdentifier i r = SolarisPatch <$> (read <$> preview (parseFold (replicateM 6 digitChar)) i)
                                          <*> (read <$> preview (parseFold (many digitChar)) r)
@@ -133,7 +134,7 @@ loadPatchDiag = fmap (mapMaybe parseLine . T.lines) . T.readFile
               | otherwise = y + 2000
         parseMonth x =
           case H.englishMonth x of
-            Just m -> m
+            Just m  -> m
             Nothing -> error ("Can't parse month: " <> show x)
         parseLine l
             | T.null l = Nothing
@@ -167,7 +168,7 @@ parsePkginfoL = pairstuff . mapMaybe groupiert . T.lines
         groupiert t = case map T.strip (T.splitOn ":  " t) of
                           ["PKGINST",v] -> Just (Pkg v)
                           ["VERSION",v] -> Just (Ver v)
-                          _ -> Nothing
+                          _             -> Nothing
 
 anaPkgInfo :: Analyzer (Seq ConfigInfo)
 anaPkgInfo = Seq.fromList . map SoftwarePackage . parsePkginfoL <$> requireTxt ["logiciels/pkginfo-l.txt"]

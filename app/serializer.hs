@@ -1,41 +1,43 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TupleSections     #-}
 module Main (main) where
 
-import Prelude
+import           Prelude
 
-import qualified Data.ByteString              as  BS
-import qualified Data.ByteString.Lazy         as  BSL
-import qualified Data.Conduit.Binary          as  CB
 import           Control.Monad.Trans.Resource (runResourceT)
-import qualified Data.HashMap.Strict          as  HM
-import qualified Data.Serialize               as  S
-import qualified Data.Map.Strict              as  M
-import qualified Data.Text                    as  T
-import qualified Data.Text.Read               as  T
-import qualified Data.Vector                  as  V
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Lazy         as BSL
+import qualified Data.Conduit.Binary          as CB
+import qualified Data.HashMap.Strict          as HM
+import qualified Data.Map.Strict              as M
+import qualified Data.Serialize               as S
+import qualified Data.Text                    as T
+import qualified Data.Text.Read               as T
+import qualified Data.Vector                  as V
 import           Network.HTTP.Simple
-import           Network.HTTP.Types.Status    (Status(..))
-import qualified Text.XML                     as  XML
+import           Network.HTTP.Types.Status    (Status (..))
+import qualified Text.XML                     as XML
 
-import Control.Lens
-import Text.XML.Stream.Parse hiding (attr)
-import Text.XML.Lens
-import Control.Monad
-import Data.Csv
-import Data.CaseInsensitive (mk)
-import Data.Maybe
-import Data.String (IsString)
-import Data.Time (getZonedTime, ZonedTime(..), LocalTime(..), toGregorian, fromGregorian, Day)
-import Development.Shake
-import Development.Shake.FilePath
-import System.Directory (createDirectoryIfMissing)
+import           Control.Lens
+import           Control.Monad
+import           Data.CaseInsensitive         (mk)
+import           Data.Csv
+import           Data.Maybe
+import           Data.String                  (IsString)
+import           Data.Time                    (Day, LocalTime (..),
+                                               ZonedTime (..), fromGregorian,
+                                               getZonedTime, toGregorian)
+import           Development.Shake
+import           Development.Shake.FilePath
+import           System.Directory             (createDirectoryIfMissing)
+import           Text.XML.Lens
+import           Text.XML.Stream.Parse        hiding (attr)
 
-import Analysis.Types
-import Analysis.Common
-import Analysis.Oval
-import Data.Oval
+import           Analysis.Common
+import           Analysis.Oval
+import           Analysis.Types
+import           Data.Oval
 
 lNode :: T.Text -> Traversal' Element Element
 lNode t = nodes . traverse . _Element . named (mk t)
@@ -74,7 +76,7 @@ loadYear = fmap (M.fromList . extractCVE) . XML.readFile def
                       _ -> fromGregorian 1970 1 1
     readScore t = case T.double t of
                       Right (v, "") -> CVSS v
-                      _ -> Unknown
+                      _             -> Unknown
     g :: T.Text -> Int
     g = read . T.unpack
 
@@ -126,11 +128,11 @@ downloadSource src = do
     runResourceT $ httpSink req $ \res ->
       case getResponseStatus res of
         Status 200 _ -> pure () <$ CB.sinkFile compressedname
-        s -> pure (fail (show s))
+        s            -> pure (fail (show s))
   case compression of
     NoCompression -> pure ()
-    GZip -> command_ [] "gunzip" [compressedname]
-    BZip2 -> command_ [] "bunzip2" [compressedname]
+    GZip          -> command_ [] "gunzip" [compressedname]
+    BZip2         -> command_ [] "bunzip2" [compressedname]
 
 loadSources :: Integer -> Rules ()
 loadSources year = do

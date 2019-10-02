@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Analysis.Cron (anaCrontab, anaUsercrontab) where
 
-import Analysis.Types
-import Analysis.Common
-import Analysis.Parsers
-import Analysis.Shell
+import           Analysis.Common
+import           Analysis.Parsers
+import           Analysis.Shell
+import           Analysis.Types
 
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import Data.Sequence (Seq)
-import Data.Text (Text)
-import Data.Char (isSpace)
-import qualified Data.Text as T
+import           Data.Char            (isSpace)
+import           Data.Sequence        (Seq)
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 anaCrontab :: Analyzer (Seq ConfigInfo)
 anaCrontab = (uncurry tci <$> filterTxt iscrond)
@@ -28,7 +28,7 @@ anaUsercrontab = tci <$> filterTxt isCrontab
         tci (x, t) = let lns = T.lines t
                      in  parseToConfigInfoMT CCronEntry lns (parseUserCrontab x lns)
         isCrontab [x] = "crontab/" `T.isPrefixOf` x
-        isCrontab _ = False
+        isCrontab _   = False
 
 isSchedule :: Text -> Bool
 isSchedule = isSchedule' . T.stripStart
@@ -69,7 +69,7 @@ parseCommand u = do
     let tu = T.unpack u
     case toCommands ("Crontab of user " ++ tu) c of
         Right se -> return (T.pack c, se)
-        Left rr -> fail rr
+        Left rr  -> fail rr
 
 crontabparser :: Parser CronEntry
 crontabparser = do

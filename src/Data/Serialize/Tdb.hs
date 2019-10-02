@@ -1,15 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections     #-}
 module Data.Serialize.Tdb (tdbEntries,parseElems) where
 
-import Prelude
-import Data.Serialize.Get
-import qualified Data.ByteString as BS
-import Control.Monad
-import Control.Applicative
-import Data.List (sort)
-import Data.Word
+import           Control.Applicative
+import           Control.Monad
+import qualified Data.ByteString     as BS
 import qualified Data.HashMap.Strict as HM
+import           Data.List           (sort)
+import           Data.Serialize.Get
+import           Data.Word
+
+import           Prelude
 
 readDataAt :: (Int, [STR]) -> Int -> Get (Int, [STR])
 readDataAt (curpos, curlst) offset = do

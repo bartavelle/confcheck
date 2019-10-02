@@ -9,23 +9,23 @@ module Data.Microsoft
   , loadKBDays
   ) where
 
-import Analysis.Common
-import Analysis.Types
+import           Analysis.Common
+import           Analysis.Types
 
-import Data.Parsers.Xml
-import Control.Applicative
-import qualified Data.ByteString as BS
+import           Control.Applicative
+import           Control.Monad
+import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Textual as T
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import Data.Time
-import Control.Monad
-import qualified Data.Serialize as S
-import qualified Data.IntMap.Strict as IM
-import qualified Data.Sequence as Seq
-import Data.Text (Text)
-import Data.Sequence (Seq)
+import qualified Data.IntMap.Strict   as IM
+import           Data.Parsers.Xml
+import           Data.Sequence        (Seq)
+import qualified Data.Sequence        as Seq
+import qualified Data.Serialize       as S
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import qualified Data.Text.Encoding   as T
+import qualified Data.Textual         as T
+import           Data.Time
 
 data MBSA = MBSA { _mbsaId        :: Text
                  , _mbsaKBID      :: Int
@@ -106,9 +106,9 @@ checkCategory = element_ "Check" $ do
     lx (element_ "Detail" (many updatedata) <|> return [])
 
 rBool :: Text -> Parser Bool
-rBool "true" = pure True
+rBool "true"  = pure True
 rBool "false" = pure False
-rBool x = fail (show x <> " is not a boolean")
+rBool x       = fail (show x <> " is not a boolean")
 
 rSev :: Text -> Parser Severity
 rSev "0" = pure None
@@ -116,7 +116,7 @@ rSev "1" = pure Low
 rSev "2" = pure Medium
 rSev "3" = pure High
 rSev "4" = pure (CVSS 10)
-rSev x = fail (show x <> " is an invalid severity")
+rSev x   = fail (show x <> " is an invalid severity")
 
 updatedata :: Parser MBSA
 updatedata = lx $ element "UpdateData" $ \mp -> do

@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Test.Tasty
-import Test.Tasty.HUnit
+import           Test.Tasty
+import           Test.Tasty.HUnit
 
 import qualified Analysis.Parsers as P
 
-import qualified Text.Megaparsec as P
+import qualified Text.Megaparsec  as P
 
 testTimeParser :: TestTree
 testTimeParser = testCase "parsec time parser" $ assertEqual "time" expected actual

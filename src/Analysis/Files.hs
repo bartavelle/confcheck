@@ -1,38 +1,38 @@
+{-# LANGUAGE BangPatterns  #-}
+{-# LANGUAGE RankNTypes    #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE BangPatterns #-}
 module Analysis.Files (anaFilesNG, anaFilesOld, analyzeFS, normalFilepath, lineOld, lineNG', nhe, getParent, parseOldPerms) where
 
-import qualified Data.Foldable as F
-import Control.Lens
-import Control.Monad
-import System.FilePath
-import Data.List
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map.Strict as M
-import Data.Either
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString as BSB
-import Control.Dependency
-import qualified Data.Maybe.Strict as S
-import qualified Data.Text.Encoding as T
-import qualified Data.Thyme as Y
-import qualified Data.Thyme.Time.Core as Y
-import Control.Parallel.Strategies
-import qualified Data.CompactMap as CM
-import Data.Sequence.Lens
-import Data.Text (Text)
-import Data.Sequence (Seq)
-import Data.Word (Word8)
+import           Control.Dependency
+import           Control.Lens
+import           Control.Monad
+import           Control.Parallel.Strategies
+import qualified Data.ByteString             as BSB
+import qualified Data.ByteString.Char8       as BS
+import qualified Data.CompactMap             as CM
+import           Data.Either
+import qualified Data.Foldable               as F
+import qualified Data.HashMap.Strict         as HM
+import           Data.List
+import qualified Data.Map.Strict             as M
+import qualified Data.Maybe.Strict           as S
+import           Data.Sequence               (Seq)
+import           Data.Sequence.Lens
+import           Data.Text                   (Text)
+import qualified Data.Text.Encoding          as T
+import qualified Data.Thyme                  as Y
+import qualified Data.Thyme.Time.Core        as Y
+import           Data.Word                   (Word8)
+import           System.FilePath
 
-import ByteString.Parser.Fast
-import qualified ByteString.Parser.Fast as F
-import Analysis.Types
-import Analysis.Common
-import Analysis.Sudoers
-import Analysis.Files.Conditions
-import Data.Condition
-import Data.Parsers.Atto (englishMonthToInt)
+import           Analysis.Common
+import           Analysis.Files.Conditions
+import           Analysis.Sudoers
+import           Analysis.Types
+import           ByteString.Parser.Fast
+import qualified ByteString.Parser.Fast      as F
+import           Data.Condition
+import           Data.Parsers.Atto           (englishMonthToInt)
 
 isDigitFast :: Word8 -> Bool
 isDigitFast x = x >= 0x30 && x <= 0x39
@@ -49,7 +49,7 @@ char2ft x = case x of
                 'b' -> Just TBlock
                 'c' -> Just TChar
                 'D' -> Just TDoor
-                _ -> Nothing
+                _   -> Nothing
 
 parseTimestamp :: BS.ByteString -> Either F.ParseError Y.UTCTime
 parseTimestamp txt | "%++" `BS.isPrefixOf` txt = Right $ Y.mkUTCTime (Y.fromGregorian 2016 03 12) (Y.fromSeconds (0 :: Int))
@@ -74,7 +74,7 @@ lineNG' t = case BS.words t of
                     !prm' <- parseOnlyString F.onum prms
                     let ft' = case (ft'', target) of
                                   (TFile, Just _) -> TLink
-                                  _ -> ft''
+                                  _               -> ft''
                     return $! UnixFileGen (getInt inode)
                                           (getInt hardlinks)
                                           dt1'
@@ -162,16 +162,16 @@ normalFilepath :: FP -> FP
 normalFilepath = BS.pack . System.FilePath.joinPath . reverse . filterpp 0 . reverse . splitPath . BS.unpack
     where
         filterpp :: Int -> [FilePath] -> [FilePath]
-        filterpp _ [] = []
+        filterpp _ []           = []
         filterpp n ("../" : xs) = filterpp (n + 1) xs
-        filterpp 0 (x : xs) = x : filterpp 0 xs
-        filterpp n (_ : xs) = filterpp (n - 1) xs
+        filterpp 0 (x : xs)     = x : filterpp 0 xs
+        filterpp n (_ : xs)     = filterpp (n - 1) xs
 
 parchunk :: [a] -> [a]
 parchunk = withStrategy (parListChunk 200 rseq)
 
 nhe :: Either a b -> Either a b
-nhe x@(Left !_) = x
+nhe x@(Left !_)  = x
 nhe x@(Right !_) = x
 
 -- | Filtrer les commandes non spécifiées
@@ -250,6 +250,6 @@ completeLink :: FP -> FP -> FP
 completeLink cwd lnk | BS.null lnk = cwd
                      | BS.head lnk == '/' = lnk
                      | otherwise = case getParent cwd of
-                                      S.Just p -> p <> "/" <> lnk
+                                      S.Just p  -> p <> "/" <> lnk
                                       S.Nothing -> "/" <> lnk
 

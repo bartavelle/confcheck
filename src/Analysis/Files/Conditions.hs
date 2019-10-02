@@ -1,31 +1,31 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Analysis.Files.Conditions where
 
 
-import qualified Data.HashSet as HS
-import Control.Lens
-import Control.Monad
-import Data.List
-import qualified Data.Text.Encoding as T
-import qualified Data.Sequence as Seq
-import qualified Data.Foldable as F
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
+import qualified Data.ByteString       as BSN
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString as BSN
-import qualified Data.Maybe.Strict as S
-import qualified Data.Text as T
-import qualified Data.CompactMap as CM
-import qualified Data.Map.Strict as M
-import Control.Applicative
-import GHC.Exts (sortWith)
-import Data.Text (Text)
-import Data.Sequence (Seq)
-import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Word (Word8)
+import qualified Data.CompactMap       as CM
+import qualified Data.Foldable         as F
+import qualified Data.HashSet          as HS
+import           Data.List
+import qualified Data.Map.Strict       as M
+import           Data.Maybe            (fromMaybe, mapMaybe)
+import qualified Data.Maybe.Strict     as S
+import           Data.Sequence         (Seq)
+import qualified Data.Sequence         as Seq
+import           Data.Text             (Text)
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
+import           Data.Word             (Word8)
+import           GHC.Exts              (sortWith)
 
-import Analysis.Types
-import Data.Condition
-import Analysis.Common
+import           Analysis.Common
+import           Analysis.Types
+import           Data.Condition
 
 type UnixFileParse = UnixFileGen BS.ByteString FP
 type FP = BS.ByteString
@@ -157,10 +157,10 @@ compileRule (sev, rule) = (sev, cond)
                               (foldr mkvp (error "mkvp") $ reverse parentCond)
         (patternCond, fileCond, parentCond) = foldrule ([],[],[]) rule
         foldrule acc (FilePattern ptr) = acc & _1 %~ (<> map Pure ptr)
-        foldrule acc NoRule = acc
-        foldrule acc (RuleAdd a b) = foldrule (foldrule acc a) b
-        foldrule acc (RuleCaseF m v) = acc & _2 %~ ((m,v) : )
-        foldrule acc (RuleCaseP m v) = acc & _3 %~ ((m,v) : )
+        foldrule acc NoRule            = acc
+        foldrule acc (RuleAdd a b)     = foldrule (foldrule acc a) b
+        foldrule acc (RuleCaseF m v)   = acc & _2 %~ ((m,v) : )
+        foldrule acc (RuleCaseP m v)   = acc & _3 %~ ((m,v) : )
         mkvf (cnd, mkv) curvuln f = if cnd (decodeFile f)
                                         then Vulnerability sev (VFile $ mkv f)
                                         else curvuln f
@@ -196,9 +196,9 @@ gen2vt :: UnixFileParse -> UnixFile
 gen2vt = bimap safeBS2Text BS.unpack
 
 getParent :: FP -> S.Maybe FP
-getParent "" = S.Nothing
+getParent ""  = S.Nothing
 getParent "/" = S.Nothing
-getParent x = S.Just $ dropTrailingPathSeparator $ dropFileName x
+getParent x   = S.Just $ dropTrailingPathSeparator $ dropFileName x
 
 data CheckCondition = CheckCondition { _ccPatternCon :: Condition (Pattern FP)
                                      , _ccFileCon    :: Condition (UnixFileParse -> Bool)
@@ -264,7 +264,7 @@ fileCondition allconds filemap = fchecks <> rchecks
         slowChecks :: UnixFileParse -> Maybe Vulnerability
         slowChecks curfile = case mapMaybe subcheck remcond of
                                  (v:_) -> Just v
-                                 _ -> Nothing
+                                 _     -> Nothing
             where
                 subcheck cond = if checkCondition (`match` view filePath curfile) (_ccPatternCon cond)
                                     then runChecks cond curfile <|> (getParent' curfile >>= runChecksParent cond curfile)

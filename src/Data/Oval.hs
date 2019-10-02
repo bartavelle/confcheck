@@ -1,10 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Oval ( parseOvalStream
                  , parseOvalFile
@@ -28,26 +28,27 @@ module Data.Oval ( parseOvalStream
                  , ovalLine
                  ) where
 
-import Prelude
-import qualified Text.Parsec.Prim as P
-import qualified Text.Parsec.Pos as P
-import Control.Monad
-import Control.Applicative
+import           Control.Applicative
+import           Control.Lens         hiding (element, op)
+import           Control.Monad
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.HashMap.Strict as HM
-import Data.Hashable
-import GHC.Generics hiding (to)
-import Data.Serialize (Serialize(..))
-import Data.Time.Calendar
-import Data.Maybe (fromMaybe, catMaybes)
-import Control.Lens hiding (element,op)
-import Text.Read (readMaybe)
+import           Data.Hashable
+import qualified Data.HashMap.Strict  as HM
+import           Data.Maybe           (catMaybes, fromMaybe)
+import           Data.Serialize       (Serialize (..))
+import qualified Data.Text            as T
+import           Data.Time.Calendar
+import           GHC.Generics         hiding (to)
+import qualified Text.Parsec.Pos      as P
+import qualified Text.Parsec.Prim     as P
+import           Text.Read            (readMaybe)
 
-import Data.Parsers.Xml
-import Data.Condition
-import Analysis.Types
-import Debug.Trace
+import           Analysis.Types
+import           Data.Condition
+import           Data.Parsers.Xml
+import           Debug.Trace
+
+import           Prelude
 
 newtype ObjectId = ObjectId T.Text
                    deriving (Show, Eq, Hashable)
@@ -136,8 +137,8 @@ data TestType
 
 data OFullTest
     = OFullTest
-    { _ofulltestObject    :: !T.Text
-    , _ofulltestOp        :: !OvalStateOp
+    { _ofulltestObject :: !T.Text
+    , _ofulltestOp     :: !OvalStateOp
     } deriving (Show, Generic)
 
 
@@ -215,7 +216,7 @@ definition = lx $ element "definition" $ \args ->
                        Just txt -> either fail return (translateCriticity txt)
               return $ (sev,) $ case catMaybes mdays of
                                     (x : _) -> x
-                                    _ -> fromGregorian 1970 1 1
+                                    _       -> fromGregorian 1970 1 1
           return (title', refs', desc', msev')
       P.skipMany $ ignoreElement "notes"
       crit <- criteria <|> pure (Always False)
@@ -313,7 +314,7 @@ unameTest = element "uname_test" $ withid $ \rid ->
   UnameT rid <$> objectRef
 
 dpkgInfoTest :: Parser OvalTest
-dpkgInfoTest = element "dpkginfo_test" $ withid $ \rid -> 
+dpkgInfoTest = element "dpkginfo_test" $ withid $ \rid ->
   DpkgInfoT rid <$> objectRef <*> optional stateRef
 
 extractOperation :: T.Text -> Parser Operation
@@ -347,7 +348,7 @@ state = lx $ anyElement $ \ename mp -> do
               extractop (RpmState . parseRPMVersion . sanitizeVersion . T.unpack) emap
           sanitizeVersion x = case break (==':') x of
                                   (_, ':' : o) -> o
-                                  _ -> x
+                                  _            -> x
           version = element "version" (extractop Version)
           signatureKeyid = element "signature_keyid" (extractop SignatureKeyId)
           arch = element "arch" (extractop Arch)
@@ -378,14 +379,14 @@ parsedoc = lx $ element_ "oval_definitions" $ do
 parseOvalStream :: FilePath -> BSL.ByteString -> Either String ([OvalDefinition], HM.HashMap OTestId OFullTest)
 parseOvalStream filename l =
     case parseStream filename l (xml parsedoc <|> parsedoc) of
-      Left rr -> Left rr
+      Left rr         -> Left rr
       Right (d,t,p,s) -> (d,) . HM.fromList <$> mkTests t p s
 
 mkTests :: [OvalTest] -> [OvalObject] -> [OvalState] -> Either String [(OTestId, OFullTest)]
 mkTests tests objects states = catMaybes <$> mapM mkTest tests
     where
         getFromMap t mp = case HM.lookup t mp of
-                              Just x -> Right x
+                              Just x  -> Right x
                               Nothing -> Left ("Could not lookup " <> show t)
         mkTest :: OvalTest -> Either String (Maybe (OTestId, OFullTest))
         mkTest t = case t of

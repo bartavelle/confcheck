@@ -1,18 +1,19 @@
 -- pompé du module debian
-{-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts   #-}
 module Data.DebianVersion (DebianVersion, parseDebianVersion, prettyDebianVersion, version, revision) where
 
-import Analysis.Parsers
+import           Analysis.Parsers
 
-import Data.Data (Data)
-import Data.Typeable (Typeable)
-import Data.Char
-import qualified Data.Text as T
-import Text.Regex
-import Control.Monad
+import           Control.Monad
+import           Data.Char
+import           Data.Data            (Data)
+import qualified Data.Text            as T
+import           Data.Typeable        (Typeable)
+import           Text.Regex
 
-import Text.Megaparsec
-import Text.Megaparsec.Char
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 data DebianVersion
   = DebianVersion String (Found Int, NonNumeric, Found NonNumeric) deriving (Data, Typeable)
@@ -58,14 +59,14 @@ instance Ord NonNumeric where
     compare (NonNumeric s1 n1) (NonNumeric s2 n2) =
         case compareNonNumeric s1 s2 of
           EQ -> compare n1 n2
-          o -> o
+          o  -> o
 
 instance Eq Numeric where
     (Numeric n1 mnn1) == (Numeric n2 mnn2) =
         case compare n1 n2 of
           EQ -> case compareMaybeNonNumeric mnn1 mnn2 of
                   EQ -> True
-                  _ -> False
+                  _  -> False
           _ -> False
 
 compareNonNumeric :: String -> String -> Ordering
@@ -89,16 +90,16 @@ order c
 compareMaybeNonNumeric :: Maybe NonNumeric -> Maybe NonNumeric -> Ordering
 compareMaybeNonNumeric mnn1 mnn2 =
     case (mnn1, mnn2) of
-      (Nothing, Nothing) -> EQ
+      (Nothing, Nothing)                -> EQ
       (Just (NonNumeric nn _), Nothing) -> compareNonNumeric nn ""
       (Nothing, Just (NonNumeric nn _)) -> compareNonNumeric "" nn
-      (Just nn1, Just nn2) -> compare nn1 nn2
+      (Just nn1, Just nn2)              -> compare nn1 nn2
 
 instance Ord Numeric where
     compare (Numeric n1 mnn1) (Numeric n2 mnn2) =
         case compare n1 n2 of
           EQ -> compareMaybeNonNumeric mnn1 mnn2
-          o -> o
+          o  -> o
 
 -- |Split a DebianVersion into its three components: epoch, version,
 -- revision.  It is not safe to use the parsed version number for

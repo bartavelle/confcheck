@@ -1,14 +1,14 @@
 {-# LANGUAGE TupleSections #-}
 module Analysis.Rhosts (anaRhosts) where
 
-import Analysis.Types
-import Analysis.Common
-import Data.Condition
+import           Analysis.Common
+import           Analysis.Types
+import           Data.Condition
 
-import Control.Applicative
-import qualified Data.Text as T
-import Data.Text (Text)
-import Data.Sequence (Seq)
+import           Control.Applicative
+import           Data.Sequence       (Seq)
+import           Data.Text           (Text)
+import qualified Data.Text           as T
 
 data RhostSource = RSEquiv | RSUser Text
                  deriving (Show, Eq)
@@ -29,7 +29,7 @@ anar :: [Text] -> Text -> Seq ConfigInfo
 anar [filename, ".rhosts"] cnt = anaRhost ("~" <> username <> "/.rhosts") (RSUser username) cnt
     where
         username = case T.stripPrefix "conf_user/" filename >>= T.stripSuffix "-conf.tar" of
-                       Just n -> n
+                       Just n  -> n
                        Nothing -> filename -- this is impossible too
 anar _ _ = mempty -- impossible, given the previous conditions
 
@@ -45,12 +45,12 @@ toRhost (RhostEncoding src host user) = Rhost muser conds
         hostcond = fmap (mkcond RHHost RHHostGroup) host
         usercond = fmap (mkcond RHUser RHUserGroup) user
         mkcond :: (Text -> RHCond) -> (Text -> RHCond) -> RhostIdentifier -> Condition RHCond
-        mkcond single _ (RHId u) = Pure (single u)
+        mkcond single _ (RHId u)      = Pure (single u)
         mkcond _ group (RHNetgroup u) = Pure (group u)
-        mkcond _ _ RHAny = Always True
+        mkcond _ _ RHAny              = Always True
         muser = case src of
                     RSUser x -> Just x
-                    _ -> Nothing
+                    _        -> Nothing
 
 anaRhost :: Text -> RhostSource -> Text -> Seq ConfigInfo
 anaRhost loc src = parseToConfigInfo loc (CRhost . toRhost . uncurry (RhostEncoding src)) . map rhostline . filter (\x -> not ("#" `T.isPrefixOf` x || T.null x)) . map T.strip . T.lines
@@ -58,8 +58,8 @@ anaRhost loc src = parseToConfigInfo loc (CRhost . toRhost . uncurry (RhostEncod
 rhostline :: Text -> Either String (Negatable RhostIdentifier, Negatable RhostIdentifier)
 rhostline cnt = case T.words cnt of
                     [a,b] -> (,) <$> parseid a <*> parseid b
-                    [a] -> (,Positive RHAny) <$> parseid a
-                    _ -> Left ("Bad rhost line: " <> show cnt)
+                    [a]   -> (,Positive RHAny) <$> parseid a
+                    _     -> Left ("Bad rhost line: " <> show cnt)
 
 parseid :: Text -> Either String (Negatable RhostIdentifier)
 parseid c | T.null c = Left "Empty rhost identifier"

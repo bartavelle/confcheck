@@ -1,26 +1,27 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes        #-}
 module Analysis.Passwd (analyzePasswdfile, analyzeUnixUsers) where
 
-import Prelude
-import qualified Data.Text as T
-import qualified Data.Text.Read as T
-import qualified Data.Set as S
-import qualified Data.Map.Strict as M
-import Control.Applicative
-import Control.Lens
-import Control.Monad
-import Data.Condition
-import Data.Sequence (Seq)
-import Data.Sequence.Lens
-import qualified Data.Sequence as Seq
-import qualified Data.Foldable as F
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
+import           Data.Condition
+import qualified Data.Foldable       as F
+import qualified Data.Map.Strict     as M
+import           Data.Sequence       (Seq)
+import qualified Data.Sequence       as Seq
+import           Data.Sequence.Lens
+import qualified Data.Set            as S
+import qualified Data.Text           as T
+import qualified Data.Text.Read      as T
 
-import Analysis.Common
-import Analysis.Types
-import Analysis.Sudoers
+import           Analysis.Common
+import           Analysis.Sudoers
+import           Analysis.Types
 
-import Data.Common (regroupMap)
+import           Data.Common         (regroupMap)
+
+import           Prelude
 
 r :: T.Text -> Int
 r x = case T.decimal x of
@@ -35,7 +36,7 @@ parsePwdEntry = map parseLine . T.lines
     where
         parseLine l =
             case T.splitOn ":" l of
-                [u,p,uid,gid,gecos,home,shell] -> case ( (,) <$> T.decimal uid <*> T.decimal gid) of
+                [u,p,uid,gid,gecos,home,shell] -> case (,) <$> T.decimal uid <*> T.decimal gid of
                                                       Right ((uid',""), (gid',"")) -> ConfPass $ PasswdEntry u p uid' gid' gecos home shell
                                                       _ -> ConfigError $ MiscError ("Could not parse passwd line: " <> l)
                 _ -> ConfigError $ MiscError ("Could not parse passwd line: " <> l)
@@ -58,7 +59,7 @@ parseShadowEntry = map parseLine . T.lines
         geth "!!" = SNotSetup
         geth x    = SHash x
         mr "" = Nothing
-        mr x = Just (r x)
+        mr x  = Just (r x)
         parseLine l =
             case T.splitOn ":" l of
                 (u:h:a:b:c:d:e:f:_) -> ConfShadow $ ShadowEntry u (geth h) (mr a) (mr b) (mr c) (mr d) (mr e) (mr f)
@@ -97,7 +98,7 @@ analyzeUnixUsers' pwds shas grps sud rh = checkMultiple shas shadowUsername (Mul
         shadowmap = M.fromList $ map (\s -> (s ^. shadowUsername, s)) $ F.toList shas
         membermap = M.fromListWith (++) [ (member, [g]) | g <- F.toList grps, member <- g ^.. groupMembers . folded ]
         rhostmap = M.fromListWith (++) (rh ^.. folded . to rhu . folded)
-        rhu (Rhost Nothing _) = Nothing
+        rhu (Rhost Nothing _)    = Nothing
         rhu x@(Rhost (Just u) _) = Just (u, [x])
         checkMultiple :: (Ord b, Eq b) => Seq a -> Lens' a b -> ([a] -> VulnType) -> Seq Vulnerability
         checkMultiple lst l mkvuln = fmap (Vulnerability Medium . mkvuln) (Seq.fromList $ M.elems mulmap)
@@ -138,8 +139,8 @@ analyzeUnixUsers' pwds shas grps sud rh = checkMultiple shas shadowUsername (Mul
                 vulns = mempty
 
 regroupRHosts :: [Rhost] -> [Rhost]
-regroupRHosts = map (\(k,v) -> Rhost k v) . M.toList . fmap simp . regroupMap (view rhostSrc) (view rhostCond)
+regroupRHosts = map (uncurry Rhost) . M.toList . fmap simp . regroupMap (view rhostSrc) (view rhostCond)
     where
         simp :: [Condition RHCond] -> Condition RHCond
         simp [x] = x
-        simp xs = simplifyCond1 (Or xs)
+        simp xs  = simplifyCond1 (Or xs)

@@ -22,23 +22,24 @@ module Analysis.Parsers
  , braces
  ) where
 
-import Prelude
-import Analysis.Types
-import Text.Megaparsec
-import Text.Megaparsec.Char
+import           Analysis.Types
+import           Data.Char                  (digitToInt, isAlphaNum, isDigit)
+import           Data.List                  (foldl')
+import qualified Data.Parsers.Helpers       as H
+import qualified Data.Sequence              as Seq
+import           Data.String                (IsString)
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
+import qualified Data.Textual               as Textual
+import           Data.Time
+import           Data.Void                  (Void)
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Char (isAlphaNum, isDigit, digitToInt)
-import Data.Time
-import qualified Data.Sequence as Seq
-import Data.List (foldl')
-import qualified Data.Textual as Textual
-import qualified Text.Parser.Token as Tok
-import qualified Text.Megaparsec.Parsers as TP
-import qualified Data.Parsers.Helpers as H
-import Data.Void (Void)
-import Data.String (IsString)
+import qualified Text.Megaparsec.Parsers    as TP
+import qualified Text.Parser.Token          as Tok
+
+import           Prelude
 
 type Parser = Parsec Void Text
 

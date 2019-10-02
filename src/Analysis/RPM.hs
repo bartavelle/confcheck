@@ -1,21 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections     #-}
 module Analysis.RPM (listRPMs, postRPMAnalysis, runAnalyze) where
 
 
-import Data.Oval
-import Analysis.Types
-import Analysis.Oval
-import Analysis.Common
+import           Analysis.Common
+import           Analysis.Oval
+import           Analysis.Types
+import           Data.Oval
 
-import Control.Lens
-import qualified Data.Text as T
-import qualified Data.Map.Strict as M
+import           Control.Lens
+import           Control.Monad
 import qualified Data.HashMap.Strict as HM
-import Control.Monad
-import qualified Data.Sequence as Seq
-import Data.Maybe (fromMaybe)
-import Data.Sequence (Seq)
+import qualified Data.Map.Strict     as M
+import           Data.Maybe          (fromMaybe)
+import           Data.Sequence       (Seq)
+import qualified Data.Sequence       as Seq
+import qualified Data.Text           as T
 
 listRPMs :: Analyzer (Seq ConfigInfo)
 listRPMs = fmap SoftwarePackage . rpmInfos <$> requireTxt ["logiciels/rpm-qa.txt"]
@@ -25,7 +25,7 @@ rpmInfos = Seq.fromList . map getPackageinfo' . T.lines
     where
         getPackageinfo' = fromMaybe (error "Invalid package name") . getPackageinfo
 
-runAnalyze :: UnixVersion 
+runAnalyze :: UnixVersion
            -> T.Text -- architecture
            -> M.Map T.Text RPMVersion
            -> ([OvalDefinition], HM.HashMap OTestId OFullTest)
@@ -44,7 +44,7 @@ mkrpmmap :: Seq ConfigInfo -> M.Map T.Text RPMVersion
 mkrpmmap = M.fromList . toListOf (folded . _SoftwarePackage . to mrpm . folded)
     where
         mrpm (Package p v PRPM) = Just (p, parseRPMVersion (T.unpack v))
-        mrpm _ = Nothing
+        mrpm _                  = Nothing
 
 postRPMAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest))) -> Seq ConfigInfo -> IO (Seq Vulnerability)
 postRPMAnalysis ovaldispatch ce =

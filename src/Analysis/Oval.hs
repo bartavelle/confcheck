@@ -1,31 +1,32 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE Rank2Types        #-}
+{-# LANGUAGE TupleSections     #-}
 -- https://www.redhat.com/security/data/metrics/
 
 module Analysis.Oval where
 
-import Prelude
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map.Strict as M
-import qualified Data.Serialize as S
-import Control.Lens
-import Control.Monad
-import Control.Applicative
-import Data.Time.Calendar
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BS8
-import Text.Regex.PCRE.ByteString.Utils
-import Data.List (intercalate)
-import Data.Maybe (mapMaybe, fromMaybe)
-import Data.DebianVersion
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
+import qualified Data.ByteString                  as BS
+import qualified Data.ByteString.Char8            as BS8
+import           Data.DebianVersion
+import qualified Data.HashMap.Strict              as HM
+import           Data.List                        (intercalate)
+import qualified Data.Map.Strict                  as M
+import           Data.Maybe                       (fromMaybe, mapMaybe)
+import qualified Data.Serialize                   as S
+import qualified Data.Text                        as T
+import qualified Data.Text.Encoding               as T
+import           Data.Time.Calendar
+import           Text.Regex.PCRE.ByteString.Utils
 
-import Data.Condition
-import Data.Oval
-import Analysis.Common
-import Analysis.Types
+import           Analysis.Common
+import           Analysis.Types
+import           Data.Condition
+import           Data.Oval
+
+import           Prelude
 
 epoch :: Day
 epoch = fromGregorian 1970 1 1
@@ -38,7 +39,7 @@ getPackageinfo x = case reverse (T.splitOn "-" x) of
 
 defaultDay :: T.Text -> Day
 defaultDay t = case preview (ix 1) (T.splitOn "-" t) >>= text2Int of
-                   Just y -> fromGregorian (fromIntegral y) 1 1
+                   Just y  -> fromGregorian (fromIntegral y) 1 1
                    Nothing -> epoch
 
 loadOvalSerialized :: FilePath -> IO ([OvalDefinition], HM.HashMap OTestId OFullTest)
@@ -46,7 +47,7 @@ loadOvalSerialized f = do
     cnt <- BS.readFile f
     case S.decode cnt of
         Right (r, l) -> return (r, HM.fromList l)
-        Left rr -> error ("loadOvalSerialized: " ++ rr)
+        Left rr      -> error ("loadOvalSerialized: " ++ rr)
 
 -- ^ Le paramètre des packages debians est un peu particulier, car les
 -- fichiers oval se basent sur le nom du package *source*
@@ -78,7 +79,7 @@ ovalRuleMatched :: UnixVersion
                 -> (Bool, [(T.Text, Either DebianVersion RPMVersion)])
 ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests vl = tolst . matchingConditions check' . view ovalCond $ vl
     where
-        tolst Nothing = (False, [])
+        tolst Nothing    = (False, [])
         tolst (Just lst) = (True, concat lst)
         check' testid = HM.lookup testid tests >>= runtest
             where

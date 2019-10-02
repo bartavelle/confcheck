@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Analysis.LinuxKern (anaKernel) where
 
-import Analysis.Types
-import Analysis.Common
-import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import Data.Text (Text)
-import qualified Data.Text as T
-import Control.Lens
+import           Analysis.Common
+import           Analysis.Types
+import           Control.Lens
+import           Data.Sequence   (Seq)
+import qualified Data.Sequence   as Seq
+import           Data.Text       (Text)
+import qualified Data.Text       as T
 
 anaKernel :: Analyzer (Seq ConfigInfo)
 anaKernel = parseVersion <$> requireTxt ["etat/version.txt"]

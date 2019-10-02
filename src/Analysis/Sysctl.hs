@@ -2,21 +2,21 @@
 module Analysis.Sysctl (anaSysctl, wrongSysctl) where
 
 
-import Analysis.Common
-import Analysis.Types
+import           Analysis.Common
+import           Analysis.Types
 
-import Control.Monad
-import Data.Maybe
-import qualified Data.Sequence as Seq
-import qualified Data.Text as T
-import Data.Text (Text)
-import Data.Sequence (Seq)
+import           Control.Monad
+import           Data.Maybe
+import           Data.Sequence   (Seq)
+import qualified Data.Sequence   as Seq
+import           Data.Text       (Text)
+import qualified Data.Text       as T
 
 anaSysctl :: Analyzer (Seq ConfigInfo)
 anaSysctl = lineAnalyzer "conf/sysctl-a.txt" (chk . map T.strip . T.splitOn "=")
     where
         chk [k,v] = Right (Sysctl k v)
-        chk x = Left ("Could not parse " <> show x)
+        chk x     = Left ("Could not parse " <> show x)
 
 checks :: [ (Pattern Text, Text, Severity, Maybe Text) ]
 checks = [ (S ".arp_accept"          , "0", Low   , Just "Gratuitous ARP should not be accepted.")

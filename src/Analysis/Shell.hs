@@ -2,12 +2,12 @@
 module Analysis.Shell (toCommands) where
 
 
-import ShellCheck.Parser
-import ShellCheck.AST
-import ShellCheck.Interface
-import Control.Monad.Writer
-import Control.Monad.Identity (Identity(..))
-import Data.List (nub)
+import           Control.Monad.Identity (Identity (..))
+import           Control.Monad.Writer
+import           Data.List              (nub)
+import           ShellCheck.AST
+import           ShellCheck.Interface
+import           ShellCheck.Parser
 
 data Command = Command { _cmdpath :: FilePath
                        , _cmdargs :: [String]
@@ -18,7 +18,7 @@ toparam :: Token -> String
 toparam = concat . execWriter . doAnalysis f
     where
         f (T_Literal _ x) = tell [x]
-        f _ = return ()
+        f _               = return ()
 
 extractCommands :: Token -> [Command]
 extractCommands = nub . execWriter . doAnalysis f

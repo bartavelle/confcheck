@@ -1,8 +1,8 @@
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TupleSections     #-}
 module Analysis ( RegroupedVulnerability(..)
                 , PackageUniqInfo(..)
                 , FicheInfo(..)
@@ -20,57 +20,57 @@ module Analysis ( RegroupedVulnerability(..)
                 , regroupPackages
                 ) where
 
-import Data.Oval
-import Analysis.Types
-import Analysis.ConnectToApp (buildNetApps)
-import Analysis.Fiche
-import Analysis.Common
-import Analysis.Passwd
-import Analysis.LinuxKern
-import Analysis.RPM
-import Analysis.Debian (postDebAnalysis, listDebs)
-import Analysis.Solaris
-import Analysis.Files
-import Analysis.Cron
-import Analysis.TarStream
-import Analysis.Netstat
-import Analysis.Sudoers
-import Analysis.Ifconfig
-import Analysis.Ipaddr
-import Analysis.Sssd
-import Analysis.Sysctl
-import Analysis.Rhosts
-import Analysis.WindowsAudit
-import Data.Microsoft
-import Data.PrismFilter
+import           Analysis.Common
+import           Analysis.ConnectToApp        (buildNetApps)
+import           Analysis.Cron
+import           Analysis.Debian              (listDebs, postDebAnalysis)
+import           Analysis.Fiche
+import           Analysis.Files
+import           Analysis.Ifconfig
+import           Analysis.Ipaddr
+import           Analysis.LinuxKern
+import           Analysis.Netstat
+import           Analysis.Passwd
+import           Analysis.Rhosts
+import           Analysis.RPM
+import           Analysis.Solaris
+import           Analysis.Sssd
+import           Analysis.Sudoers
+import           Analysis.Sysctl
+import           Analysis.TarStream
+import           Analysis.Types
+import           Analysis.WindowsAudit
+import           Data.Microsoft
+import           Data.Oval
+import           Data.PrismFilter
 
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Conduit.List    as CL
-import qualified Data.Conduit.Require as R
-import qualified Data.Conduit.Zlib    as CZ
-import qualified Data.Foldable        as F
-import qualified Data.IntMap.Strict   as IM
-import qualified Data.Sequence        as Seq
-import qualified Data.Text            as T
-import qualified Data.Map.Strict      as M
-import qualified Data.HashMap.Strict  as HM
-import Data.Conduit
-import Data.List
-import Data.Maybe (mapMaybe)
-import Data.Ord (comparing)
-import Data.Time (Day(..))
-import Data.Textual (toText)
-import Control.Lens
-import Control.Arrow ( (&&&) )
-import Data.Sequence.Lens
-import Control.Applicative
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Resource (runResourceT)
-import Data.String (fromString)
-import Data.Text (Text)
-import Data.Sequence (Seq)
-import Control.Dependency (guardResult)
+import           Control.Applicative
+import           Control.Arrow                ((&&&))
+import           Control.Dependency           (guardResult)
+import           Control.Lens
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Resource (runResourceT)
+import qualified Data.ByteString.Lazy         as BSL
+import           Data.Conduit
+import qualified Data.Conduit.List            as CL
+import qualified Data.Conduit.Require         as R
+import qualified Data.Conduit.Zlib            as CZ
+import qualified Data.Foldable                as F
+import qualified Data.HashMap.Strict          as HM
+import qualified Data.IntMap.Strict           as IM
+import           Data.List
+import qualified Data.Map.Strict              as M
+import           Data.Maybe                   (mapMaybe)
+import           Data.Ord                     (comparing)
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
+import           Data.Sequence.Lens
+import           Data.String                  (fromString)
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Data.Textual                 (toText)
+import           Data.Time                    (Day (..))
 
 data RegroupedVulnerability = RV (Seq Vulnerability)
                             | RPack (M.Map RPMVersion PackageUniqInfo)
@@ -106,7 +106,7 @@ _VFileSev :: Prism' Vulnerability (Severity, FileVuln)
 _VFileSev = prism' (\(sev, fv) -> Vulnerability sev (VFile fv)) $
     \v -> case v of
               Vulnerability sev (VFile fv) -> Just (sev, fv)
-              _ -> Nothing
+              _                            -> Nothing
 
 regroupFS :: Seq Vulnerability -> RegroupedVulnerability
 regroupFS = RFS . toListOf (folded . _VFileSev)
@@ -187,7 +187,7 @@ getHostname = Seq.singleton . Hostname <$> (requireTxtS "etc/hostname" <|> requi
         requireTxtS t = requireTxt ["conf/etc.tar.gz", t] <|> requireTxt ["conf/etc.tar.gz", T.cons '/' t]
         extraHNline t = case filter (\x -> length x > 1 && head x == "HOSTNAME") ( map (T.splitOn "=") ( T.lines t ) ) of
                             ( (_:x:_) : _) -> x
-                            _ -> mempty
+                            _              -> mempty
                             -- head . map (head . tail) . filter ( (== "HOSTNAME") . head ) . map (T.splitOn "=") . T.lines
 
 postAnalysis :: Seq Vulnerability -> Seq Vulnerability
@@ -196,9 +196,9 @@ postAnalysis allvulns = ifoldMapOf itraversed dispatch regrouped
        regrouped = regroupVulnByType allvulns
        dispatch :: VulnGroup -> Seq Vulnerability -> Seq Vulnerability
        dispatch GAuthUnix = analyzeUnixUsers
-       dispatch GFS = analyzeFS regrouped
-       dispatch GMisc = analyzeMisc
-       dispatch _ = id
+       dispatch GFS       = analyzeFS regrouped
+       dispatch GMisc     = analyzeMisc
+       dispatch _         = id
 
 analyzeMisc :: Seq Vulnerability -> Seq Vulnerability
 analyzeMisc lst = lst <> wrongSysctl sysctls
@@ -321,7 +321,7 @@ ficheData res
         miscVulns = res ^.. folded . filtered (\r -> all (\c -> c r) alreadyKnown)
         rrs = res ^.. folded . _ConfigInformation . _ConfigError
         fromRes def prm = case res ^.. folded . prm of
-                              [] -> def
+                              []  -> def
                               x:_ -> x
         unixversion = fromRes (UnixVersion (Unk "???") []) (_ConfigInformation . _UVersion)
         packages = sort $ mapMaybe getPackageInfo $ F.toList res

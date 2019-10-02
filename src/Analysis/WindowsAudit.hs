@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Analysis.WindowsAudit
  ( analyzeWindowsAudit
  , analyzeAuditTools
@@ -7,31 +7,31 @@ module Analysis.WindowsAudit
  , parseAuditTool
  ) where
 
-import qualified Data.Text as T
-import qualified Data.Text.Read as T
-import qualified Data.Text.Encoding as T
-import qualified Data.ByteString as BS
+import           Control.Lens
+import           Data.Bits            (popCount)
+import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Textual as T
-import qualified Data.Vector as V
-import qualified Data.Sequence as Seq
-import qualified Data.Map.Strict as M
-import qualified Data.Set as S
-import Data.Text (Text)
-import Data.Sequence (Seq)
-import Data.List (nub)
-import Data.Word (Word8)
-import Data.Char
-import Control.Lens
-import Data.Bits (popCount)
-import Network.IP.Addr
-import Data.Maybe
-import Safe
+import           Data.Char
+import           Data.List            (nub)
+import qualified Data.Map.Strict      as M
+import           Data.Maybe
+import           Data.Sequence        (Seq)
+import qualified Data.Sequence        as Seq
+import qualified Data.Set             as S
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import qualified Data.Text.Encoding   as T
+import qualified Data.Text.Read       as T
+import qualified Data.Textual         as T
+import qualified Data.Vector          as V
+import           Data.Word            (Word8)
+import           Network.IP.Addr
+import           Safe
 
-import Data.PrismFilter
-import Analysis.Common
-import Analysis.Types
-import AuditTool
+import           Analysis.Common
+import           Analysis.Types
+import           AuditTool
+import           Data.PrismFilter
 
 data UserAnalysis = WUser Text Bool Bool SID
                   | WGroup Text Text SID
@@ -81,12 +81,12 @@ userAnalysis = analyzeUser . arrangeInfo . mapMaybe (toUser . (_2 %~ cleanLine))
         toUser _ = Nothing
         cleanu x = case T.break (== '\\') x of
                        (r,"") -> r
-                       (_,r) -> T.tail r
-        db "Vrai" = Just True
-        db "Faux" = Just False
-        db "True" = Just True
+                       (_,r)  -> T.tail r
+        db "Vrai"  = Just True
+        db "Faux"  = Just False
+        db "True"  = Just True
         db "False" = Just False
-        db _ = Nothing
+        db _       = Nothing
         analyzeUser :: ( [(Text, Bool, Bool, SID)], [(Text, Text, SID)], [Text] ) -> [Vulnerability]
         analyzeUser (userlist, grouplist, problemlist) = mapMaybe miscErr problemlist ++ map userinfo userlist ++ groupinfo
             where
@@ -168,7 +168,7 @@ mkNetif mac ip mask = If4 <$> pure mac <*> mnet <*> pure mmac
         hexparse :: Text -> Maybe Word8
         hexparse t = case T.hexadecimal t of
                          Right (x, "") -> Just x
-                         _ -> Nothing
+                         _             -> Nothing
         mmac = MAC . V.fromList <$> mapM hexparse (T.splitOn ":" mac)
 
 miscVuln :: Severity -> Text -> Maybe Vulnerability

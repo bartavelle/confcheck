@@ -1,30 +1,30 @@
 module Analysis.Files.Conditions2 where
 
-import qualified Data.HashSet as HS
-import Control.Lens
-import Control.Monad
-import Data.List
-import qualified Data.Text.Encoding as T
-import qualified Data.Sequence as Seq
-import qualified Data.Foldable as F
-import qualified Data.ByteString.Char8 as BS
-import qualified System.Posix.FilePath as FP
-import qualified Data.Maybe.Strict as S
-import Data.Maybe (mapMaybe)
-import qualified Data.Text as T
-import qualified Data.CompactMap as CM
-import qualified Data.Map.Strict as M
-import Control.Applicative
-import GHC.Exts (sortWith)
-import Data.Text (Text)
-import Data.Sequence (Seq)
-import Data.Maybe (fromMaybe)
-import Control.Monad.State.Strict
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
+import           Control.Monad.State.Strict
+import qualified Data.ByteString.Char8      as BS
+import qualified Data.CompactMap            as CM
+import qualified Data.Foldable              as F
+import qualified Data.HashSet               as HS
+import           Data.List
+import qualified Data.Map.Strict            as M
+import           Data.Maybe                 (mapMaybe)
+import           Data.Maybe                 (fromMaybe)
+import qualified Data.Maybe.Strict          as S
+import           Data.Sequence              (Seq)
+import qualified Data.Sequence              as Seq
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
+import           GHC.Exts                   (sortWith)
+import qualified System.Posix.FilePath      as FP
 
-import Analysis.Types
-import Analysis.Files.Conditions
-import Data.Condition
-import Analysis.Common
+import           Analysis.Common
+import           Analysis.Files.Conditions
+import           Analysis.Types
+import           Data.Condition
 
 data FileTree = Leaf !UnixFileParse
               | Dir !UnixFileParse !(M.Map FP FileTree)
@@ -32,7 +32,7 @@ data FileTree = Leaf !UnixFileParse
 
 getF :: FileTree -> UnixFileParse
 getF f = case f of
-             Leaf x -> x
+             Leaf x  -> x
              Dir x _ -> x
 
 toFileTree :: [ UnixFileParse ] -> Either Text FileTree

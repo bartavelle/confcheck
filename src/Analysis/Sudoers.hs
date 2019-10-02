@@ -2,31 +2,31 @@
 module Analysis.Sudoers (anasudo, isUserMatching, testCommand, extractCommands, commandMatch, checkUserCondition, parseCnt, extractSudoconfig, distributeEither) where
 
 
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
-import qualified Data.Set as S
-import qualified Data.Map.Strict as M
-import qualified Data.Foldable as F
-import qualified Data.Sequence as Seq
-import Data.Text (Text)
-import Data.Sequence (Seq)
-import Network.IP.Addr
+import qualified Data.Foldable        as F
+import qualified Data.List.NonEmpty   as NE
+import qualified Data.Map.Strict      as M
+import           Data.Sequence        (Seq)
+import qualified Data.Sequence        as Seq
+import qualified Data.Set             as S
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import           Network.IP.Addr
 
-import Analysis.Types
-import Analysis.Parsers
-import Analysis.Common
-import Data.Condition
+import           Analysis.Common
+import           Analysis.Parsers
+import           Analysis.Types
+import           Data.Condition
 
-import Text.Megaparsec
-import Text.Megaparsec.Char
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
-import Data.Char (isUpper,isSpace)
-import Data.List (nub,groupBy)
-import Data.Either (partitionEithers)
-import Data.Maybe (mapMaybe)
-import Control.Lens
-import Control.Monad hiding (forM, mapM, sequence)
-import Data.Traversable
+import           Control.Lens
+import           Control.Monad        hiding (forM, mapM, sequence)
+import           Data.Char            (isSpace, isUpper)
+import           Data.Either          (partitionEithers)
+import           Data.List            (groupBy, nub)
+import           Data.Maybe           (mapMaybe)
+import           Data.Traversable
 
 type SudoList a = NE.NonEmpty (Negatable a)
 
@@ -295,7 +295,7 @@ resolveSudoList :: (Eq b, F.Foldable f) => (a -> Either Text (Condition b)) -> f
 resolveSudoList f = fmap (simplifyCond1 . tocond . partitionNegatable) . mapM (traverse f) . F.toList
 
 tocond :: ([Condition b], [Condition b]) -> Condition b
-tocond ([], []) = Always True
+tocond ([], [])  = Always True
 tocond ([], pos) = Or pos
 tocond (neg, []) = Not (Or neg)
 tocond (neg,pos) = And [Not (Or neg), Or pos]
@@ -323,8 +323,8 @@ resolveSpec tgtpass usermap hostmap runasmap cmndmap users specs origline = do
             runascondg <- resolveUser runasmap origline runasgroups
             let runascond = simplifyCond1 $ And [runascondu, fmap togroup runascondg]
                 togroup (SudoUsername x) = SudoGroupname x
-                togroup (SudoUid x) = SudoGid x
-                togroup x = x
+                togroup (SudoUid x)      = SudoGid x
+                togroup x                = x
             cmdlist <- traverse (resolveCmndlist cmndmap origline) ncmnd
             let rcmd y = case y of
                            Negative x -> Not x
@@ -361,10 +361,10 @@ checkUserCondition uuser = checkCondition cu
         groups = uuser ^.. uugrp . folded <> uuser ^. uuextra
         gids = groups ^.. folded . groupGid
         groupnames = groups ^.. folded . groupName
-        cu (SudoUsername x) = x == username
-        cu (SudoUid x) = x == userid
+        cu (SudoUsername x)  = x == username
+        cu (SudoUid x)       = x == userid
         cu (SudoGroupname x) = x `elem` groupnames
-        cu (SudoGid x) = x `elem` gids
+        cu (SudoGid x)       = x `elem` gids
 
 testCommand :: UnixUser -> UnixUser -> Text -> [Text] -> [Condition Sudo] -> Bool
 testCommand uuser runas ucom uargs = any (checkCondition test')
@@ -389,7 +389,7 @@ isUserMatching uuser ruser = checkCondition chk
 commandMatch :: Text -> Condition SudoCommand -> Bool
 commandMatch t = checkCondition chk
     where
-        chk Visudo = False
+        chk Visudo            = False
         chk (SudoDirectory d) = d `T.isPrefixOf` t
         chk (SudoNoArgs f)    = f == t
         chk (SudoAnyArgs f)   = f == t
@@ -406,7 +406,7 @@ anasudo :: Analyzer (Seq ConfigInfo)
 anasudo = gensudorules . snd <$> filterTxt isSudoers
     where
         isSudoers ["conf/etc.tar.gz", x] = "etc/sudoers" `T.isInfixOf` x
-        isSudoers _  = False
+        isSudoers _                      = False
         gensudorules cnt =
             let (parseErrors, goodParse) = parseCnt cnt & traverse %~ distributeEither
                                                         & partitionEithers

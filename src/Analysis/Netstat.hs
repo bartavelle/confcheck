@@ -1,22 +1,22 @@
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
 module Analysis.Netstat (anaNetstat, parseNetstatNA, parseNetstatNAP) where
 
-import Analysis.Types
-import Analysis.Parsers
-import Analysis.Common
+import           Analysis.Common
+import           Analysis.Parsers
+import           Analysis.Types
 
-import Data.Sequence (Seq)
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Sequence as Seq
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import Control.Monad
-import Network.IP.Addr
-import Control.Monad.State.Strict as S
-import Data.Maybe ( catMaybes )
+import           Control.Monad
+import           Control.Monad.State.Strict as S
+import           Data.Maybe                 (catMaybes)
+import           Data.Sequence              (Seq)
+import qualified Data.Sequence              as Seq
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
+import           Network.IP.Addr
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 anaNetstat :: Analyzer (Seq ConfigInfo)
 anaNetstat =    (parseNetstatNAP <$> requireTxt ["reseau/netstat-nap.txt"])
@@ -108,7 +108,7 @@ getCnxId = do
     void $ char ':'
     dport <- (AnyPort <$ char '*')
          <|> (DP <$> textual)
-             
+
     return (sip, sport, dip, dport)
 
 loadProgram :: Parser (Maybe (Int, Text))

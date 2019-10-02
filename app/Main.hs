@@ -1,23 +1,23 @@
 module Main where
 
-import Analysis
-import Analysis.Types
-import Analysis.Oval
-import Analysis.Solaris
-import Analysis.Common
-import Data.Microsoft
+import           Analysis
+import           Analysis.Common
+import           Analysis.Oval
+import           Analysis.Solaris
+import           Analysis.Types
+import           Data.Microsoft
 
-import Debug.Trace
+import           Debug.Trace
 
 import           Control.Lens
 import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import           Data.Csv (encode)
-import qualified Data.Foldable as F
-import qualified Data.Text as T
+import           Data.Csv                   (encode)
+import qualified Data.Foldable              as F
+import qualified Data.Text                  as T
 import           Options.Applicative
 
-import Prelude
+import           Prelude
 
 data Options = Options RunMode [FilePath]
     deriving Show

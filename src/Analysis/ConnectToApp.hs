@@ -3,18 +3,18 @@ module Analysis.ConnectToApp where
 -- module Analysis.ConnectToApp (buildNetApps) where
 
 import           Control.Lens
-import           Data.Either (partitionEithers)
-import           Data.List (foldl')
-import           Data.Maybe (fromMaybe)
+import           Data.Either     (partitionEithers)
+import           Data.List       (foldl')
 import qualified Data.Map.Strict as M
-import qualified Data.Set as S
-import           Data.Text (Text)
-import qualified Data.Text as T
-import           Data.Textual (toText)
+import           Data.Maybe      (fromMaybe)
+import qualified Data.Set        as S
+import           Data.Text       (Text)
+import qualified Data.Text       as T
+import           Data.Textual    (toText)
 import           Network.IP.Addr
 
-import Analysis.Types
-import Analysis.Fiche
+import           Analysis.Fiche
+import           Analysis.Types
 
 data PT = PTCP | PUDP
         deriving (Show, Eq, Ord)
@@ -94,7 +94,7 @@ partitionServerClients ifaces listen = foldl' sortClient (serverMap, [])
     sortClient (mp, remotes) f@(CLT pt (lip, lport) _) =
         let key = (pt, lip, lport)
         in case M.lookup key mp of
-            Nothing -> (mp, f:remotes)
+            Nothing  -> (mp, f:remotes)
             Just lst -> (M.insert key (f:lst) mp, remotes)
 
 snub :: Ord a => [a] -> [a]
