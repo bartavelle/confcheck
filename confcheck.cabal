@@ -140,15 +140,14 @@ executable confcheck-serializer
     build-depends:     base
                      , confcheck
                      , confcheck-types
-                     , xml-lens
                      , case-insensitive
-                     , xml-conduit
                      , time
                      , text
                      , containers
                      , bytestring
                      , cereal
                      , lens
+                     , lens-aeson
                      , unordered-containers
                      , cassava
                      , vector

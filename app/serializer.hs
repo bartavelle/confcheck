@@ -5,42 +5,35 @@ module Main (main) where
 
 import           Prelude
 
+import           Control.Lens
+import           Control.Monad
 import           Control.Monad.Trans.Resource (runResourceT)
+import           Data.Aeson.Lens
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Lazy         as BSL
 import qualified Data.Conduit.Binary          as CB
+import           Data.Csv
 import qualified Data.HashMap.Strict          as HM
 import qualified Data.Map.Strict              as M
-import qualified Data.Serialize               as S
-import qualified Data.Text                    as T
-import qualified Data.Text.Read               as T
-import qualified Data.Vector                  as V
-import           Network.HTTP.Simple
-import           Network.HTTP.Types.Status    (Status (..))
-import qualified Text.XML                     as XML
-
-import           Control.Lens
-import           Control.Monad
-import           Data.CaseInsensitive         (mk)
-import           Data.Csv
 import           Data.Maybe
+import qualified Data.Serialize               as S
 import           Data.String                  (IsString)
+import qualified Data.Text                    as T
 import           Data.Time                    (Day, LocalTime (..),
                                                ZonedTime (..), fromGregorian,
                                                getZonedTime, toGregorian)
+import           Data.Time.Clock              (UTCTime (..))
+import qualified Data.Vector                  as V
 import           Development.Shake
 import           Development.Shake.FilePath
+import           Network.HTTP.Simple
+import           Network.HTTP.Types.Status    (Status (..))
 import           System.Directory             (createDirectoryIfMissing)
-import           Text.XML.Lens
-import           Text.XML.Stream.Parse        hiding (attr)
 
 import           Analysis.Common
 import           Analysis.Oval
 import           Analysis.Types
 import           Data.Oval
-
-lNode :: T.Text -> Traversal' Element Element
-lNode t = nodes . traverse . _Element . named (mk t)
 
 data KBDate = KBDate { _kbdPosted      :: Day
                      , _kbdBulletinKB  :: Maybe Int
@@ -67,18 +60,26 @@ loadMicrosoftBulletin :: FilePath -> IO (Either String [KBDate])
 loadMicrosoftBulletin fp = (_Right %~ V.toList . snd) . decodeByName <$> BSL.readFile fp
 
 loadYear :: FilePath -> IO (M.Map T.Text (Day, Severity))
-loadYear = fmap (M.fromList . extractCVE) . XML.readFile def
-  where
-    extractCVE = toListOf (root . nodes . traverse . _Element . to mkCVE)
-    mkCVE e = (e ^. attr "id", (parseDate (e ^. lNode "published-datetime" . text) , e ^. lNode "cvss" . lNode "base_metrics" . lNode "score" . text . to readScore))
-    parseDate x = case T.splitOn "-" (T.takeWhile (/='T') x) of
-                      [y,m,d] -> fromGregorian (fromIntegral (g y)) (g m) (g d)
-                      _ -> fromGregorian 1970 1 1
-    readScore t = case T.double t of
-                      Right (v, "") -> CVSS v
-                      _             -> Unknown
-    g :: T.Text -> Int
-    g = read . T.unpack
+loadYear fp = do
+    filecontent <- BS.readFile fp
+    let cves = filecontent ^.. key "CVE_Items" . _Array . traverse
+        mkcve cve = case extract cve of
+                      ( Just cveid, Just pubdate, sev) ->
+                        case sev of
+                          Just "HIGH"   -> (cveid, (utctDay pubdate, High))
+                          Just "MEDIUM" -> (cveid, (utctDay pubdate, Medium))
+                          Just "LOW"    -> (cveid, (utctDay pubdate, Low))
+                          Just sev'     -> error ("Unknown severity: " ++ show sev')
+                          Nothing       -> (cveid, (utctDay pubdate, Unknown))
+                      ex                -> error ("Invalid cve entry: " ++ show ex)
+        extract cve =
+          ( cve ^? key "cve" . key "CVE_data_meta" . key "ID" . _String
+          , cve ^? key "publishedDate" . _JSON
+          , cve ^? key "impact" . key "baseMetricV2" . key "severity" . _String
+          )
+
+
+    pure (M.fromList (map mkcve cves))
 
 data RCompr
   = BZip2
@@ -140,8 +141,8 @@ loadSources year = do
   -- downloading CVEs
   forM_ [2002..year] $ \y ->
     let yt = show y
-        filename = "nvdcve-2.0-" <> yt <> ".xml"
-    in  dl (DL "http://static.nvd.nist.gov/feeds/xml/cve" GZip filename False)
+        filename = "nvdcve-1.1-" <> yt <> ".json"
+    in  dl (DL "https://nvd.nist.gov/feeds/json/cve/1.1/" GZip filename False)
   -- downloading various stuff
   dl (DL "https://getupdates.oracle.com/reports" NoCompression "patchdiag.xref" False)
   -- downloading ovals
@@ -175,11 +176,11 @@ main = do
         , "Once downloaded, convert it to csv and save it to " <> out
         ]
     "serialized/cve.cereal" %> \out -> do
-      let pathes = [ "serialized/nvdcve-2.0-" <> show year <> ".xml" | year <- [2002..currentYear] ]
+      let pathes = [ "serialized/nvdcve-1.1-" <> show year <> ".json" | year <- [2002..currentYear] ]
       need pathes
       cves <- mconcat <$> mapM loadCVEs pathes
       liftIO (BS.writeFile out (S.encode cves))
-    "serialized/nvdcve-2.0-*.xml" %> \out -> do
+    "serialized/nvdcve-1.1-*.json" %> \out -> do
       let src = "sources" </> dropDirectory1 out
       liftIO (putStrLn src)
       need [src]
@@ -211,4 +212,3 @@ serializeOval src =
               pure (enrichOval cves oval)
             else pure oval
         liftIO (BS.writeFile out (S.encode (eoval, HM.toList tests)))
-
