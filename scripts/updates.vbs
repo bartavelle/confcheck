@@ -43,9 +43,9 @@ Next
 
 For I = 0 to searchResult.Updates.Count-1
     Set update = searchResult.Updates.Item(I)
-    Set bids = ""
+    bids = ""
     For J = 0 to update.SecurityBulletinIDs.Count-1
-        Set bid = update.SecurityBulletinIDs.Item(J)
+        bid = update.SecurityBulletinIDs.Item(J)
         bids = bids & " " & bid
     Next
     WScript.Echo update.Title & vbTab & update.MsrcSeverity & vbTab & update.Identity.UpdateID & "/" & update.Identity.RevisionNumber & vbTab & bids
