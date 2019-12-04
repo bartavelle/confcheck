@@ -237,10 +237,10 @@ dpkgInfoObject = element "dpkginfo_object" $ \mp -> do
 
 textFileContentObject :: Parser OvalObject
 textFileContentObject = element "textfilecontent54_object" $ \mp -> do
-  filepath <- lx (getTextFrom0 "filepath") <|> do
+  filepath <- lx (getTextFrom0 "filepath" <|> do
     pth <- lx $ getTextFrom0 "path"
     fname <- lx $ getTextFrom0 "filename"
-    pure (pth <> "/" <> fname)
+    pure (pth <> "/" <> fname))
   ptrn <- lx $ getTextFrom0 "pattern"
   inst <- lx $ getTextFrom0 "instance"
   oid <- objectId mp
