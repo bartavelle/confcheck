@@ -86,7 +86,7 @@ instance Serialize OvalStateOp where
 
 data OvalTest = RpmInfoT !OTestId !ObjectId !StateId
               | FamilyT !OTestId !ObjectId !StateId
-              | UnameT !OTestId !ObjectId
+              | UnameT !OTestId !ObjectId !(Maybe StateId)
               | UnknownT
               | DpkgInfoT !OTestId !ObjectId !(Maybe StateId)
               | Unhandled !OTestId !ObjectId !StateId !TestDetails
@@ -106,6 +106,7 @@ data OvalObject = RpmO !ObjectId !T.Text
                 | UnameO !ObjectId
                 | DpkgO !ObjectId !T.Text
                 | ReleaseCodenameO !ObjectId
+                | FileContent !ObjectId !T.Text !T.Text !T.Text
                 deriving Show
 
 data Operation = LessThan
@@ -236,23 +237,27 @@ dpkgInfoObject = element "dpkginfo_object" $ \mp -> do
 
 textFileContentObject :: Parser OvalObject
 textFileContentObject = element "textfilecontent54_object" $ \mp -> do
-  pth <- lx $ getTextFrom0 "path"
-  fname <- lx $ getTextFrom0 "filename"
+  filepath <- lx (getTextFrom0 "filepath") <|> do
+    pth <- lx $ getTextFrom0 "path"
+    fname <- lx $ getTextFrom0 "filename"
+    pure (pth <> "/" <> fname)
   ptrn <- lx $ getTextFrom0 "pattern"
   inst <- lx $ getTextFrom0 "instance"
-  case (pth, fname, ptrn, inst) of
-    ("/etc", "debian_version", "(\\d+)\\.\\d", "1") -> ReleaseCodenameO <$> objectId mp
-    ("/etc", "lsb-release", _, "1") -> ReleaseCodenameO <$> objectId mp
-    _ -> fail "?!?"
+  oid <- objectId mp
+  pure $ case (filepath, ptrn, inst) of
+    ("/etc/debian_version", "(\\d+)\\.\\d", "1") -> ReleaseCodenameO oid
+    ("/etc/lsb-release", _, "1") -> ReleaseCodenameO oid
+    _ -> FileContent oid filepath ptrn inst
 
 releaseCodenameObject :: Parser OvalObject
 releaseCodenameObject = anyElement $ \ename mp -> do
-  comment <- extractParameter "comment" mp
+  comment <- optional (extractParameter "comment" mp)
   oid <- objectId mp
   ignoreNested []
   case comment of
-    "The singleton release codename object." -> return (ReleaseCodenameO oid)
-    _ -> fail ("Unknown object " ++ T.unpack comment ++ " in object " ++ T.unpack ename)
+    Just "The singleton release codename object." -> return (ReleaseCodenameO oid)
+    _ | ename == "red-def:rpmverifyfile_object" -> return (ReleaseCodenameO oid)
+    _ -> fail ("Unknown object " ++ maybe "no comment" T.unpack comment ++ " in object " ++ T.unpack ename)
 
 familyObject :: Parser OvalObject
 familyObject = element "family_object" $ fmap UnameO . objectId
@@ -292,9 +297,12 @@ unhandledTest = anyElement $ \ename mp -> do
   rid <- OTestId <$> extractParameter "id" mp
   objid <- objectRef
   sttid <- stateRef
+  mcomment <- fromMaybe "???" <$> optional (extractParameter "comment" mp)
   details <- TestDetails ename <$> extractParameter "check" mp
-                               <*> extractParameter "check_existence" mp
-                               <*> extractParameter "comment" mp
+                               <*> (   extractParameter "check_existence" mp
+                                   <|> pure mcomment
+                                   )
+                               <*> pure mcomment
   pure $ if _tdComment details `elem`
                   [ "Is the host running Ubuntu trusty?"
                   , "Is the host running Ubuntu xenial?"
@@ -302,16 +310,25 @@ unhandledTest = anyElement $ \ename mp -> do
                   , "Debian GNU/Linux 9 is installed"
                   , "Debian GNU/Linux 8 is installed"
                   , "Debian GNU/Linux 7 is installed"
+                  , "Red Hat Enterprise Linux 3 is installed"
+                  , "Red Hat Enterprise Linux 4 is installed"
+                  , "Red Hat Enterprise Linux 5 is installed"
+                  , "Red Hat Enterprise Linux 6 is installed"
+                  , "Red Hat Enterprise Linux 7 is installed"
+                  , "Red Hat Enterprise Linux 8 is installed"
+                  , "Red Hat Enterprise Linux must be installed"
                   ]
              then TestAlways rid True
-             else Unhandled rid objid sttid details
+             else if "kernel earlier than " `T.isPrefixOf` _tdComment details
+                    then TestAlways rid False -- TODO true or false??
+                    else Unhandled rid objid sttid details
 
 familyTest :: Parser OvalTest
 familyTest = genTest "family_test" FamilyT
 
 unameTest :: Parser OvalTest
 unameTest = element "uname_test" $ withid $ \rid ->
-  UnameT rid <$> objectRef
+  UnameT rid <$> objectRef <*> optional stateRef
 
 dpkgInfoTest :: Parser OvalTest
 dpkgInfoTest = element "dpkginfo_test" $ withid $ \rid ->
@@ -335,6 +352,14 @@ state = lx $ anyElement $ \ename mp -> do
       ver <- extractParameter "version" mp
       ignoreNested []
       return (OvalState sid (OvalStateOp (UnameIs ver) Equal))
+    "rpmverifyfile_state" -> do
+      nm <- lx (getTextFrom "name")
+      -- TODO, assumes pattern match :/
+      guard (nm == "^redhat-release")
+      mversion <- lx (optional (getTextFrom "version"))
+      case mversion of
+        Just version -> pure (OvalState sid (OvalStateOp (Version version) PatternMatch))
+        Nothing -> pure (OvalState sid (OvalStateOp Exists Equal))
     "dpkginfo_state" -> do
       nm <- lx (optional (getTextFrom "name"))
       lx $ element "evr" $ \emap -> do
@@ -354,11 +379,10 @@ state = lx $ anyElement $ \ename mp -> do
           arch = element "arch" (extractop Arch)
       tests <- some (lx (evr <|> version <|> signatureKeyid <|> arch))
       return (OvalState sid (foldl1 AndStateOp tests))
-    nm | "textfilecontent" `T.isPrefixOf` nm -> do
-      sub <- lx (getTextFrom "subexpression")
-      return (OvalState sid (OvalStateOp (MiscTest nm sub) Equal))
+    nm | "textfilecontent" `T.isPrefixOf` nm ->
+      OvalState sid . (`OvalStateOp` Equal) . MiscTest nm <$>
+        lx (getTextFrom "subexpression" <|> getTextFrom "text")
     _ -> fail ("Unknown state type: " ++ T.unpack ename)
-    -- (rpmState <|> dpkgState <|> familyState <|> unameState)
 
 extractop :: (T.Text -> TestType) -> HM.HashMap T.Text T.Text -> Parser OvalStateOp
 extractop testtype emap = do
@@ -393,7 +417,7 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
           TestAlways testid b -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool b) Equal))
           RpmInfoT testid objectid stateid   -> go testid objectid stateid
           FamilyT testid objectid stateid    -> go testid objectid stateid
-          UnameT testid objectid             -> mgo testid objectid Nothing
+          UnameT testid objectid mstateid    -> mgo testid objectid mstateid
           DpkgInfoT testid objectid mstateid -> mgo testid objectid mstateid
           UnknownT -> pure Nothing
           Unhandled{} -> Left ("Unknown test " ++ show t)
@@ -417,6 +441,7 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
                    FamilyO oid -> (oid, "")
                    UnameO oid  -> (oid, "")
                    ReleaseCodenameO oid -> (oid, "")
+                   FileContent oid _ _ _ -> (oid, "") -- TODO :(
         smap :: HM.HashMap StateId OvalStateOp
         smap = HM.fromList $ map (\(OvalState sid top) -> (sid, top)) states
 
