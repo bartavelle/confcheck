@@ -130,6 +130,7 @@ ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests vl = tolst . matching
                             if arch == architecture
                               then Just []
                               else Nothing
+                          (_, UnameIs _, Equal) -> Nothing -- TODO, handle this
                           _ -> error ("runtest: " <> show (object, testtype, operation))
 
 enrichOval :: M.Map T.Text (Day, Severity) -> [OvalDefinition] -> [OvalDefinition]
