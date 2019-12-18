@@ -439,7 +439,7 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
           UnknownT -> pure Nothing
           Unhandled{} -> Left ("Unknown test " ++ show t)
          where
-            reVersion v = T.pack (show v) <> "(\\.[.0-9]+)?"
+            reVersion v = "^" <> T.pack (show v) <> "(\\.[.0-9]+)?$"
             go testid objectid stateid = do
               obj <- getFromMap objectid omap
               top <- getFromMap stateid smap
