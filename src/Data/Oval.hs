@@ -90,7 +90,9 @@ data OvalTest = RpmInfoT !OTestId !ObjectId !StateId
               | UnknownT
               | DpkgInfoT !OTestId !ObjectId !(Maybe StateId)
               | Unhandled !OTestId !ObjectId !StateId !TestDetails
-              | TestAlways !OTestId !Bool
+              | TestAlways !OTestId !Bool !T.Text -- why always?
+              | VersionIs !OTestId !T.Text
+              | MVersionIs !OTestId !Int
               deriving Show
 
 data TestDetails
@@ -133,7 +135,7 @@ data TestType
     | Exists
     | MiscTest       !T.Text !T.Text
     | Arch           !T.Text
-    | TTBool         !Bool
+    | TTBool         !Bool   !T.Text -- describe why this is always true
     deriving (Show, Generic, Eq)
 
 data OFullTest
@@ -230,10 +232,18 @@ object = lx (rpmObject <|> dpkgInfoObject <|> familyObject <|> unameObject <|> t
 dpkgInfoObject :: Parser OvalObject
 dpkgInfoObject = element "dpkginfo_object" $ \mp -> do
   oid <- objectId mp
-  nm <- lx $ getTextFrom0 "name"
-  if T.null nm
-    then DpkgO oid "????" <$ traceM ("Warning, empty object name for oid " ++ show oid)
-    else pure $ DpkgO oid nm
+  nm <- lx $ element_ "name" $ do
+    txt <- mconcat <$> many characterdata
+    if T.null txt
+      then do
+        p <- P.getPosition
+        comment <- optional (extractParameter "comment" mp)
+        case comment >>= T.stripPrefix "The '" >>= T.stripSuffix "' package binaries." of
+          Nothing -> "????" <$
+            traceM ("Warning, empty object name for oid " ++ show oid ++ " [" ++ show (comment, p) ++"]")
+          Just pname -> pure pname
+      else pure txt
+  pure (DpkgO oid nm)
 
 textFileContentObject :: Parser OvalObject
 textFileContentObject = element "textfilecontent54_object" $ \mp -> do
@@ -292,6 +302,23 @@ rpmtest = genTest "rpminfo_test" RpmInfoT
 unknownTest :: Parser OvalTest
 unknownTest = UnknownT <$ ignoreElement "unknown_test"
 
+automaticResults :: HM.HashMap T.Text (OTestId -> OvalTest)
+automaticResults = HM.fromList
+  [ ("Is the host running Ubuntu trusty?", (`VersionIs` "14.04"))
+  , ("Is the host running Ubuntu xenial?", (`VersionIs` "16.04"))
+  , ("Debian GNU/Linux 10 is installed", (`MVersionIs` 10))
+  , ("Debian GNU/Linux 9 is installed", (`MVersionIs` 9))
+  , ("Debian GNU/Linux 8 is installed", (`MVersionIs` 8))
+  , ("Debian GNU/Linux 7 is installed", (`MVersionIs` 7))
+  , ("Red Hat Enterprise Linux 3 is installed", (`MVersionIs` 3))
+  , ("Red Hat Enterprise Linux 4 is installed", (`MVersionIs` 4))
+  , ("Red Hat Enterprise Linux 5 is installed", (`MVersionIs` 5))
+  , ("Red Hat Enterprise Linux 6 is installed", (`MVersionIs` 6))
+  , ("Red Hat Enterprise Linux 7 is installed", (`MVersionIs` 7))
+  , ("Red Hat Enterprise Linux 8 is installed", (`MVersionIs` 8))
+  , ("Red Hat Enterprise Linux must be installed", \rid -> TestAlways rid False "RHL trick")
+  ]
+
 unhandledTest :: Parser OvalTest
 unhandledTest = anyElement $ \ename mp -> do
   rid <- OTestId <$> extractParameter "id" mp
@@ -303,25 +330,12 @@ unhandledTest = anyElement $ \ename mp -> do
                                    <|> pure mcomment
                                    )
                                <*> pure mcomment
-  pure $ if _tdComment details `elem`
-                  [ "Is the host running Ubuntu trusty?"
-                  , "Is the host running Ubuntu xenial?"
-                  , "Debian GNU/Linux 10 is installed"
-                  , "Debian GNU/Linux 9 is installed"
-                  , "Debian GNU/Linux 8 is installed"
-                  , "Debian GNU/Linux 7 is installed"
-                  , "Red Hat Enterprise Linux 3 is installed"
-                  , "Red Hat Enterprise Linux 4 is installed"
-                  , "Red Hat Enterprise Linux 5 is installed"
-                  , "Red Hat Enterprise Linux 6 is installed"
-                  , "Red Hat Enterprise Linux 7 is installed"
-                  , "Red Hat Enterprise Linux 8 is installed"
-                  , "Red Hat Enterprise Linux must be installed"
-                  ]
-             then TestAlways rid True
-             else if "kernel earlier than " `T.isPrefixOf` _tdComment details
-                    then TestAlways rid False -- TODO true or false??
-                    else Unhandled rid objid sttid details
+  pure $ case HM.lookup (_tdComment details) automaticResults of
+           Just r -> r rid
+           Nothing ->
+             if "kernel earlier than " `T.isPrefixOf` _tdComment details
+               then TestAlways rid False (_tdComment details) -- TODO true or false??
+               else Unhandled rid objid sttid details
 
 familyTest :: Parser OvalTest
 familyTest = genTest "family_test" FamilyT
@@ -414,14 +428,18 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
                               Nothing -> Left ("Could not lookup " <> show t)
         mkTest :: OvalTest -> Either String (Maybe (OTestId, OFullTest))
         mkTest t = case t of
-          TestAlways testid b -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool b) Equal))
+          TestAlways testid b w -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool b w) Equal))
           RpmInfoT testid objectid stateid   -> go testid objectid stateid
           FamilyT testid objectid stateid    -> go testid objectid stateid
           UnameT testid objectid mstateid    -> mgo testid objectid mstateid
           DpkgInfoT testid objectid mstateid -> mgo testid objectid mstateid
+          VersionIs testid version          -> pure $ Just (testid, OFullTest "distribution" (OvalStateOp (Version version) Equal))
+          MVersionIs testid version          ->
+            pure $ Just (testid, OFullTest "distribution" (OvalStateOp (Version (reVersion version)) PatternMatch))
           UnknownT -> pure Nothing
           Unhandled{} -> Left ("Unknown test " ++ show t)
          where
+            reVersion v = T.pack (show v) <> "(\\.[.0-9]+)?"
             go testid objectid stateid = do
               obj <- getFromMap objectid omap
               top <- getFromMap stateid smap
@@ -430,7 +448,7 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
             mgo testid objectid mstateid = do
               obj <- getFromMap objectid omap
               case mstateid of
-                Nothing | T.null obj -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool True) Equal))
+                Nothing | T.null obj -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool True "no stateid, no obj") Equal))
                 _ -> do
                   top <- maybe (pure (OvalStateOp Exists Equal)) (`getFromMap` smap) mstateid
                   pure $ Just (testid, OFullTest obj top)

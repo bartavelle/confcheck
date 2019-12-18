@@ -77,7 +77,7 @@ ovalRuleMatched :: UnixVersion
                 -> HM.HashMap OTestId OFullTest
                 -> OvalDefinition
                 -> (Bool, [(T.Text, Either DebianVersion RPMVersion)])
-ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests vl = tolst . matchingConditions check' . view ovalCond $ vl
+ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests = tolst . matchingConditions check' . view ovalCond
     where
         tolst Nothing    = (False, [])
         tolst (Just lst) = (True, concat lst)
@@ -118,7 +118,7 @@ ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests vl = tolst . matching
                             (packagename, rv) <- sourcename `M.lookup` debs
                             guard (rv < v)
                             return [(packagename, Left v)]
-                          TTBool b -> [] <$ guard b
+                          TTBool b _ -> [] <$ guard b
                           Arch architectures | operation == PatternMatch ->
                             case compile' compBlank execBlank (T.encodeUtf8 architectures) of
                               Left _ -> error ("Could not compile this regexp: " <> show architectures)
