@@ -1,5 +1,5 @@
 ---
-language: nix
+language: c
 sudo: false
 
 cache:
@@ -13,7 +13,7 @@ install:
  - unset CC
  - export PATH=$HOME/.local/bin:$PATH
  - ls -al
- - .travis/install-stack.sh
+ - bash .travis/install-stack.sh
 
 script:
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
