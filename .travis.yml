@@ -13,7 +13,7 @@ install:
  - unset CC
  - export PATH=$HOME/.local/bin:$PATH
  - git clone --depth=50 --branch=master https://github.com/bartavelle/confcheck-types.git ../confcheck-types/
- - git clone --depth=50 --branch=master https://github.com/bartavelle/confcheck-audittools.git ../confcheck-audittools/
+ - git clone --depth=50 --branch=master https://github.com/bartavelle/confcheck-audittool.git ../confcheck-audittool/
  - .travis/install_stack.sh
 
 script:
