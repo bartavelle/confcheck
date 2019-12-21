@@ -12,7 +12,8 @@ cache:
 install:
  - unset CC
  - export PATH=$HOME/.local/bin:$PATH
- - ./.travis/install-stack.sh
+ - ls -al
+ - .travis/install-stack.sh
 
 script:
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
