@@ -6,3 +6,4 @@ src/Data/Sql.hs
 /serialized
 scripts/*.cab
 audit_startup.vbs
+stack.yaml

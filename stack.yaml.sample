@@ -3,15 +3,12 @@ packages:
  - .
  - '../confcheck-types'
  - '../confcheck-audittool'
-resolver: lts-13.29
+resolver: lts-14.17
 extra-deps:
-  - elm-bridge-0.4.3
-  - fastparser-0.3.1.2
-  - hexpat-lens-0.1.8
-  - hexpat-tagsoup-0.1
-  - ShellCheck-0.6.0
-  - stateWriter-0.2.10
-  - withdependencies-0.2.4.3
-  - parsers-megaparsec-0.1.0.1
-
+  - fastparser-0.4.0@sha256:632217910989d97e9d35c07e85333c9c24c5ffb99315103affee4bd9e515b3c4,1739
+  - hexpat-lens-0.1.8@sha256:9d628bf6616a69e255d961e11ffd7b505a6319e5ef961fd5d58a69aa4ac5ec7c,1227
+  - hexpat-tagsoup-0.1@sha256:0e6dfae74d22b05c8d544d59c8c0a84cffbdfce65bdf410f4e3353c9b8789e36,1344
+  - parsers-megaparsec-0.1.0.1@sha256:2ebe722e6468bdfa1c236e2106815b0132e152eada60607f1f5f607a5f759037,1670
+  - stateWriter-0.2.10@sha256:26262ab5c6c6c07476c43517be2d10d93d99d5e7493a0e386ec599293c3ff7a7,2113
+  - withdependencies-0.2.5@sha256:8d381c4f95f195e8aca5f92e32af26f9a569c7acc90606ad5078d58750b54f6b,1796
 
