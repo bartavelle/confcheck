@@ -28,3 +28,5 @@ script:
 
 after_success:
   - echo "YES"
+  - tar cfvz archive.tgz serialized dist/confcheck-exe sources/patchdiag.xref
+  - du -sh archive.tgz
