@@ -53,6 +53,7 @@ main = do
     os132oval  <- mkOnce (loadOvalSerialized "serialized/opensuse.13.2.xml")
     ubuntu1404 <- mkOnce (loadOvalSerialized "serialized/com.ubuntu.trusty.cve.oval.xml")
     ubuntu1604 <- mkOnce (loadOvalSerialized "serialized/com.ubuntu.xenial.cve.oval.xml")
+    ubuntu1804 <- mkOnce (loadOvalSerialized "serialized/com.ubuntu.bionic.cve.oval.xml")
     deb7       <- mkOnce (loadOvalSerialized "serialized/oval-definitions-wheezy.xml")
     deb8       <- mkOnce (loadOvalSerialized "serialized/oval-definitions-jessie.xml")
     deb9       <- mkOnce (loadOvalSerialized "serialized/oval-definitions-stretch.xml")
@@ -68,6 +69,7 @@ main = do
                    UnixVersion OpenSuSE [13,2] -> Just os132oval
                    UnixVersion Ubuntu [14,4]   -> Just ubuntu1404
                    UnixVersion Ubuntu [16,4]   -> Just ubuntu1604
+                   UnixVersion Ubuntu [18,4]   -> Just ubuntu1804
                    UnixVersion Debian [7,_]    -> Just deb7
                    UnixVersion Debian [8,_]    -> Just deb8
                    UnixVersion Debian [9,_]    -> Just deb9

@@ -7,3 +7,4 @@ src/Data/Sql.hs
 scripts/*.cab
 audit_startup.vbs
 stack.yaml
+/dist

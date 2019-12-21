@@ -306,6 +306,7 @@ automaticResults :: HM.HashMap T.Text (OTestId -> OvalTest)
 automaticResults = HM.fromList
   [ ("Is the host running Ubuntu trusty?", (`VersionIs` "14.04"))
   , ("Is the host running Ubuntu xenial?", (`VersionIs` "16.04"))
+  , ("Is the host running Ubuntu bionic?", (`VersionIs` "18.04"))
   , ("Debian GNU/Linux 10 is installed", (`MVersionIs` 10))
   , ("Debian GNU/Linux 9 is installed", (`MVersionIs` 9))
   , ("Debian GNU/Linux 8 is installed", (`MVersionIs` 8))

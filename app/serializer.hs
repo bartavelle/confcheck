@@ -116,6 +116,7 @@ ovalSources =
     , DL "https://www.debian.org/security/oval"               NoCompression "oval-definitions-wheezy.xml"         False
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.trusty.cve.oval.xml"      False
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.xenial.cve.oval.xml"      False
+    , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.bionic.cve.oval.xml"      False
     ]
 
 downloadSource :: DlSource -> Action ()

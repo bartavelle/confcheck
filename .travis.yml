@@ -24,6 +24,7 @@ script:
    set -ex
    mkdir dist
    stack --no-terminal install --local-bin-path=dist
+   ./dist/confcheck-serializer
 
 after_success:
   - echo "YES"
