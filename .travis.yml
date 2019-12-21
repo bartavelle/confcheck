@@ -13,6 +13,7 @@ install:
  - unset CC
  - export PATH=$HOME/.local/bin:$PATH
  - ls -al
+ - ls -al .travis
  - bash .travis/install-stack.sh
 
 script:
