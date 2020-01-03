@@ -10,21 +10,23 @@ module Data.Microsoft
   ) where
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers       (CError (..))
+import           Analysis.Types.Vulnerability
 
 import           Control.Applicative
 import           Control.Monad
-import qualified Data.ByteString      as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.IntMap.Strict   as IM
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Lazy         as BSL
+import qualified Data.IntMap.Strict           as IM
 import           Data.Parsers.Xml
-import           Data.Sequence        (Seq)
-import qualified Data.Sequence        as Seq
-import qualified Data.Serialize       as S
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-import qualified Data.Text.Encoding   as T
-import qualified Data.Textual         as T
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
+import qualified Data.Serialize               as S
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as T
+import qualified Data.Textual                 as T
 import           Data.Time
 
 data MBSA = MBSA { _mbsaId        :: Text

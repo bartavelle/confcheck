@@ -2,13 +2,16 @@
 module Analysis.Rhosts (anaRhosts) where
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Negatable
+import           Analysis.Types.Rhost
 import           Data.Condition
 
 import           Control.Applicative
-import           Data.Sequence       (Seq)
-import           Data.Text           (Text)
-import qualified Data.Text           as T
+import           Data.Maybe                (fromMaybe)
+import           Data.Sequence             (Seq)
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 
 data RhostSource = RSEquiv | RSUser Text
                  deriving (Show, Eq)
@@ -28,9 +31,8 @@ anaRhosts = (uncurry anar <$> filterTxt isRHost) <|> (anaeq <$> (requireTxt ["co
 anar :: [Text] -> Text -> Seq ConfigInfo
 anar [filename, ".rhosts"] cnt = anaRhost ("~" <> username <> "/.rhosts") (RSUser username) cnt
     where
-        username = case T.stripPrefix "conf_user/" filename >>= T.stripSuffix "-conf.tar" of
-                       Just n  -> n
-                       Nothing -> filename -- this is impossible too
+        username = fromMaybe filename
+                    (T.stripPrefix "conf_user/" filename >>= T.stripSuffix "-conf.tar")
 anar _ _ = mempty -- impossible, given the previous conditions
 
 anaeq :: Text -> Seq ConfigInfo

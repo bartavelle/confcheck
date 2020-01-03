@@ -38,7 +38,15 @@ import           Analysis.Sssd
 import           Analysis.Sudoers
 import           Analysis.Sysctl
 import           Analysis.TarStream
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers
+import           Analysis.Types.Network
+import           Analysis.Types.Package
+import           Analysis.Types.Unix
+import           Analysis.Types.UnixUsers
+import           Analysis.Types.Vulnerability
+import           Analysis.Types.Windows
+import           Analysis.Windows.SID
 import           Analysis.WindowsAudit
 import           Data.Microsoft
 import           Data.Oval
@@ -332,4 +340,3 @@ ficheData res
         latestPatch = if null packages
                           then Nothing
                           else Just $ minimum $ map (view _1) packages
-

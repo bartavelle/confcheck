@@ -1,11 +1,17 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Analysis.Netstat (anaNetstat, parseNetstatNA, parseNetstatNAP) where
+module Analysis.Netstat
+  ( anaNetstat
+  , parseNetstatNA
+  , parseNetstatNAP
+  ) where
 
 import           Analysis.Common
 import           Analysis.Parsers
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers     (CError (..))
+import           Analysis.Types.Network
 
 import           Control.Monad
 import           Control.Monad.State.Strict as S

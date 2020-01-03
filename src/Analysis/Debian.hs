@@ -1,31 +1,32 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TupleSections     #-}
 module Analysis.Debian (listDebs, postDebAnalysis, loadSerializedCVE) where
 
 import           Analysis.Common
-import           Analysis.Oval       (ovalRuleMatchedDEB)
-import           Analysis.Types
+import           Analysis.Oval                (ovalRuleMatchedDEB)
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Package
+import           Analysis.Types.Unix
+import           Analysis.Types.Vulnerability
 import           Data.Oval
 
 import           Control.Lens
 import           Control.Monad
-import qualified Data.ByteString     as BS
+import qualified Data.ByteString              as BS
 import           Data.Char
 import           Data.DebianVersion
-import qualified Data.HashMap.Strict as HM
-import           Data.List.Split     (splitWhen)
-import qualified Data.Map.Strict     as M
-import           Data.Maybe          (mapMaybe)
-import           Data.Sequence       (Seq)
-import qualified Data.Sequence       as Seq
-import qualified Data.Serialize      as S
-import           Data.Text           (Text)
-import qualified Data.Text           as T
+import qualified Data.HashMap.Strict          as HM
+import           Data.List.Split              (splitWhen)
+import qualified Data.Map.Strict              as M
+import           Data.Maybe                   (mapMaybe)
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
+import qualified Data.Serialize               as S
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
 import           Data.Time.Calendar
 
 import           Prelude
@@ -93,4 +94,3 @@ parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMult
 
 listDebs :: Analyzer (Seq ConfigInfo)
 listDebs = Seq.fromList . fmap SoftwarePackage . parseDpkgStatus <$> requireTxt ["logiciels/dpkg-status"]
-

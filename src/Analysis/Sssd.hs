@@ -1,21 +1,23 @@
 module Analysis.Sssd (anaSssd) where
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers    (CError (..), safeBS2Text)
+import           Analysis.Types.UnixUsers
 import           Control.Dependency
 import           Data.Serialize.Tdb
 
 import           Control.Applicative
 import           Control.Lens
 import           Control.Monad
-import qualified Data.ByteString     as BS
-import qualified Data.HashMap.Strict as HM
-import           Data.List           (foldl')
-import           Data.Sequence       (Seq)
-import qualified Data.Sequence       as Seq
-import qualified Data.Set            as S
-import           Data.Text           (Text)
-import qualified Data.Text           as T
+import qualified Data.ByteString           as BS
+import qualified Data.HashMap.Strict       as HM
+import           Data.List                 (foldl')
+import           Data.Sequence             (Seq)
+import qualified Data.Sequence             as Seq
+import qualified Data.Set                  as S
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 
 data TdbData = UID Int Text
              | GID Int [Text]

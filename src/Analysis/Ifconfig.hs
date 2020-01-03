@@ -2,21 +2,22 @@ module Analysis.Ifconfig (anaIfconfig) where
 
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Network
 
 import           Control.Applicative
 import           Control.Lens
 import           Control.Monad
 import           Data.Attoparsec.Text
 import           Data.Bits
-import           Data.Char            (isAlphaNum)
-import           Data.Maybe           (mapMaybe)
-import           Data.Sequence        (Seq)
-import qualified Data.Sequence        as Seq
-import           Data.Text            (Text)
-import qualified Data.Text            as T
+import           Data.Char                 (isAlphaNum)
+import           Data.Maybe                (mapMaybe)
+import           Data.Sequence             (Seq)
+import qualified Data.Sequence             as Seq
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 import           Data.Textual
-import qualified Data.Vector          as V
+import qualified Data.Vector               as V
 import           Network.IP.Addr
 
 data IfLineInfo = IfLName Text (Maybe MAC)

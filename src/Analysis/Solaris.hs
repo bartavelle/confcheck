@@ -16,24 +16,26 @@ module Analysis.Solaris (
 
 import           Analysis.Common
 import           Analysis.Parsers
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Package
+import           Analysis.Types.Vulnerability
 
 import           Control.Lens
 import           Control.Monad
-import qualified Data.Foldable        as F
+import qualified Data.Foldable                as F
 import           Data.List
-import qualified Data.Map.Strict      as M
-import           Data.Maybe           (fromMaybe, mapMaybe)
-import qualified Data.Parsers.Helpers as H
-import           Data.Sequence        (Seq)
-import qualified Data.Sequence        as Seq
-import           Data.Set             (Set)
-import qualified Data.Set             as S
+import qualified Data.Map.Strict              as M
+import           Data.Maybe                   (fromMaybe, mapMaybe)
+import qualified Data.Parsers.Helpers         as H
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
+import           Data.Set                     (Set)
+import qualified Data.Set                     as S
 import           Data.Set.Lens
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-import qualified Data.Text.IO         as T
-import           Data.Time            (Day, fromGregorian)
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import qualified Data.Text.IO                 as T
+import           Data.Time                    (Day, fromGregorian)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 

@@ -6,20 +6,25 @@ import           Control.Applicative
 import           Control.Lens
 import           Control.Monad
 import           Data.Condition
-import qualified Data.Foldable       as F
-import qualified Data.Map.Strict     as M
-import           Data.Sequence       (Seq)
-import qualified Data.Sequence       as Seq
+import qualified Data.Foldable                as F
+import qualified Data.Map.Strict              as M
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
 import           Data.Sequence.Lens
-import qualified Data.Set            as S
-import qualified Data.Text           as T
-import qualified Data.Text.Read      as T
+import qualified Data.Set                     as S
+import qualified Data.Text                    as T
+import qualified Data.Text.Read               as T
 
 import           Analysis.Common
 import           Analysis.Sudoers
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers       (CError(..))
+import           Analysis.Types.Rhost
+import           Analysis.Types.Sudo
+import           Analysis.Types.UnixUsers
+import           Analysis.Types.Vulnerability
 
-import           Data.Common         (regroupMap)
+import           Data.Common                  (regroupMap)
 
 import           Prelude
 

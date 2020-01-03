@@ -8,28 +8,35 @@ module Analysis.WindowsAudit
  ) where
 
 import           Control.Lens
-import           Data.Bits            (popCount)
-import qualified Data.ByteString      as BS
-import qualified Data.ByteString.Lazy as BSL
+import           Data.Bits                    (popCount)
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Lazy         as BSL
 import           Data.Char
-import           Data.List            (nub)
-import qualified Data.Map.Strict      as M
+import           Data.List                    (nub)
+import qualified Data.Map.Strict              as M
 import           Data.Maybe
-import           Data.Sequence        (Seq)
-import qualified Data.Sequence        as Seq
-import qualified Data.Set             as S
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-import qualified Data.Text.Encoding   as T
-import qualified Data.Text.Read       as T
-import qualified Data.Textual         as T
-import qualified Data.Vector          as V
-import           Data.Word            (Word8)
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
+import qualified Data.Set                     as S
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as T
+import qualified Data.Text.Read               as T
+import qualified Data.Textual                 as T
+import qualified Data.Vector                  as V
+import           Data.Word                    (Word8)
 import           Network.IP.Addr
 import           Safe
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers       (CError (..))
+import           Analysis.Types.Network
+import           Analysis.Types.Package
+import           Analysis.Types.Unix
+import           Analysis.Types.Vulnerability
+import           Analysis.Types.Windows
+import           Analysis.Windows.SID
 import           AuditTool
 import           Data.PrismFilter
 

@@ -1,28 +1,30 @@
 {-# LANGUAGE RankNTypes #-}
 module Analysis.Parsers
- ( parseInt
- , parseDateYMD
- , parseTimeMs
- , lx
- , parseUnixUser
- , parseToConfigInfoMT
- , parseEnglishMonth
- , parseToConfigInfoND
- , parseErrorToConfigInfo
- , parseErrorToCError
- , hexValue
- , textual
- , Parser
- , Void
- , stringLiteral
- , symbolic
- , decimal
- , parens
- , brackets
- , braces
- ) where
+   ( parseInt
+   , parseDateYMD
+   , parseTimeMs
+   , lx
+   , parseUnixUser
+   , parseToConfigInfoMT
+   , parseEnglishMonth
+   , parseToConfigInfoND
+   , parseErrorToConfigInfo
+   , parseErrorToCError
+   , hexValue
+   , textual
+   , Parser
+   , Void
+   , stringLiteral
+   , symbolic
+   , decimal
+   , parens
+   , brackets
+   , braces
+   ) where
 
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers (CError(..))
+
 import           Data.Char                  (digitToInt, isAlphaNum, isDigit)
 import           Data.List                  (foldl')
 import qualified Data.Parsers.Helpers       as H

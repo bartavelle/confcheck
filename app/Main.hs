@@ -1,20 +1,23 @@
+{-# LANGUAGE LambdaCase #-}
 module Main where
 
 import           Analysis
 import           Analysis.Common
 import           Analysis.Oval
 import           Analysis.Solaris
-import           Analysis.Types
+import           Analysis.Types.Helpers       (AuditFileType (..))
+import           Analysis.Types.Unix
+import           Analysis.Types.Vulnerability
 import           Data.Microsoft
 
 import           Debug.Trace
 
 import           Control.Lens
 import           Control.Monad
-import qualified Data.ByteString.Lazy.Char8 as BSL
-import           Data.Csv                   (encode)
-import qualified Data.Foldable              as F
-import qualified Data.Text                  as T
+import qualified Data.ByteString.Lazy.Char8   as BSL
+import           Data.Csv                     (encode)
+import qualified Data.Foldable                as F
+import qualified Data.Text                    as T
 import           Options.Applicative
 
 import           Prelude
@@ -31,19 +34,26 @@ data RunMode
 options :: Parser Options
 options = Options <$> runmode <*> some file
   where
-    parseMode = maybeReader $ \s ->
-      case s of
+    parseMode = maybeReader $ \case
         "csv"      -> Just CSV
         "patches"  -> Just Patches
         "standard" -> Just Standard
         _          -> Nothing
-    runmode = option parseMode (long "mode" <> short 'm' <> value Standard <> help "Mode, valid values are standard, csv and patches")
+    runmode = option parseMode
+      (  long "mode"
+      <> short 'm'
+      <> value Standard
+      <> help "Mode, valid values are standard, csv and patches"
+      )
     file = strArgument (help "Files to analyze" <> metavar "FILE")
 
 main :: IO ()
 main = do
     let commandParser = info (options <**> helper)
-                             (fullDesc <> progDesc "Analyzes configuration dumps" <> header "confcheck-exe - analyze configuration dumps")
+                             ( fullDesc
+                             <> progDesc "Analyzes configuration dumps"
+                             <> header "confcheck-exe - analyze configuration dumps"
+                             )
     Options runmode files <- execParser commandParser
     xdiag      <- mkOnce (loadPatchDiag "sources/patchdiag.xref")
     rhoval     <- mkOnce (loadOvalSerialized "serialized/com.redhat.rhsa-all.xml")
@@ -96,4 +106,3 @@ toRecord v
       Vulnerability sev det -> ["Vulnerabilité", show sev, show det]
       ConfigInformation det -> ["Information", "", show det]
       SomethingToCheck      -> ["??"]
-

@@ -1,21 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
 module Analysis.RPM (listRPMs, postRPMAnalysis, runAnalyze) where
 
 
 import           Analysis.Common
 import           Analysis.Oval
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Package
+import           Analysis.Types.Unix
+import           Analysis.Types.Vulnerability
 import           Data.Oval
 
 import           Control.Lens
 import           Control.Monad
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map.Strict     as M
-import           Data.Maybe          (fromMaybe)
-import           Data.Sequence       (Seq)
-import qualified Data.Sequence       as Seq
-import qualified Data.Text           as T
+import qualified Data.HashMap.Strict          as HM
+import qualified Data.Map.Strict              as M
+import           Data.Maybe                   (fromMaybe)
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
+import qualified Data.Text                    as T
 
 listRPMs :: Analyzer (Seq ConfigInfo)
 listRPMs = fmap SoftwarePackage . rpmInfos <$> requireTxt ["logiciels/rpm-qa.txt"]

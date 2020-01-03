@@ -22,7 +22,9 @@ import           Data.Time.Calendar
 import           Text.Regex.PCRE.ByteString.Utils
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.Package
+import           Analysis.Types.Unix
+import           Analysis.Types.Vulnerability
 import           Data.Condition
 import           Data.Oval
 

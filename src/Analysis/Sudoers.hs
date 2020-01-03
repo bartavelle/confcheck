@@ -1,31 +1,45 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Analysis.Sudoers (anasudo, isUserMatching, testCommand, extractCommands, commandMatch, checkUserCondition, parseCnt, extractSudoconfig, distributeEither) where
+module Analysis.Sudoers
+    ( anasudo
+    , isUserMatching
+    , testCommand
+    , extractCommands
+    , commandMatch
+    , checkUserCondition
+    , parseCnt
+    , extractSudoconfig
+    , distributeEither
+    ) where
 
 
-import qualified Data.Foldable        as F
-import qualified Data.List.NonEmpty   as NE
-import qualified Data.Map.Strict      as M
-import           Data.Sequence        (Seq)
-import qualified Data.Sequence        as Seq
-import qualified Data.Set             as S
-import           Data.Text            (Text)
-import qualified Data.Text            as T
+import qualified Data.Foldable             as F
+import qualified Data.List.NonEmpty        as NE
+import qualified Data.Map.Strict           as M
+import           Data.Sequence             (Seq)
+import qualified Data.Sequence             as Seq
+import qualified Data.Set                  as S
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 import           Network.IP.Addr
 
 import           Analysis.Common
 import           Analysis.Parsers
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers    (CError (..))
+import           Analysis.Types.Negatable
+import           Analysis.Types.Sudo
+import           Analysis.Types.UnixUsers
 import           Data.Condition
 
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
 import           Control.Lens
-import           Control.Monad        hiding (forM, mapM, sequence)
-import           Data.Char            (isSpace, isUpper)
-import           Data.Either          (partitionEithers)
-import           Data.List            (groupBy, nub)
-import           Data.Maybe           (mapMaybe)
+import           Control.Monad             hiding (forM, mapM, sequence)
+import           Data.Char                 (isSpace, isUpper)
+import           Data.Either               (partitionEithers)
+import           Data.List                 (groupBy, nub)
+import           Data.Maybe                (mapMaybe)
 import           Data.Traversable
 
 type SudoList a = NE.NonEmpty (Negatable a)

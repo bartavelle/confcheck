@@ -6,25 +6,27 @@ module Analysis.Files.Conditions where
 import           Control.Applicative
 import           Control.Lens
 import           Control.Monad
-import qualified Data.ByteString       as BSN
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.CompactMap       as CM
-import qualified Data.Foldable         as F
-import qualified Data.HashSet          as HS
+import qualified Data.ByteString              as BSN
+import qualified Data.ByteString.Char8        as BS
+import qualified Data.CompactMap              as CM
+import qualified Data.Foldable                as F
+import qualified Data.HashSet                 as HS
 import           Data.List
-import qualified Data.Map.Strict       as M
-import           Data.Maybe            (fromMaybe, mapMaybe)
-import qualified Data.Maybe.Strict     as S
-import           Data.Sequence         (Seq)
-import qualified Data.Sequence         as Seq
-import           Data.Text             (Text)
-import qualified Data.Text             as T
-import qualified Data.Text.Encoding    as T
-import           Data.Word             (Word8)
-import           GHC.Exts              (sortWith)
+import qualified Data.Map.Strict              as M
+import           Data.Maybe                   (fromMaybe, mapMaybe)
+import qualified Data.Maybe.Strict            as S
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as T
+import           Data.Word                    (Word8)
+import           GHC.Exts                     (sortWith)
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.File
+import           Analysis.Types.Helpers       (safeBS2Text)
+import           Analysis.Types.Vulnerability
 import           Data.Condition
 
 type UnixFileParse = UnixFileGen BS.ByteString FP
@@ -512,4 +514,3 @@ noWriteFiles = [ P "/etc/init.d"
                , E "/etc/crypttab"
                , E "/etc/gshadow"
                ]
-

@@ -10,8 +10,7 @@ import qualified Data.Foldable              as F
 import qualified Data.HashSet               as HS
 import           Data.List
 import qualified Data.Map.Strict            as M
-import           Data.Maybe                 (mapMaybe)
-import           Data.Maybe                 (fromMaybe)
+import           Data.Maybe                 (fromMaybe, mapMaybe)
 import qualified Data.Maybe.Strict          as S
 import           Data.Sequence              (Seq)
 import qualified Data.Sequence              as Seq
@@ -73,4 +72,3 @@ fileCondition conditions filelist = either (Seq.singleton . ConfigInformation . 
 
 checkConditions :: [ CheckCondition ] -> FileTree -> Seq Vulnerability
 checkConditions = undefined
-

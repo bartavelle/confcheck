@@ -32,7 +32,7 @@ import           System.Directory             (createDirectoryIfMissing)
 
 import           Analysis.Common
 import           Analysis.Oval
-import           Analysis.Types
+import           Analysis.Types.Vulnerability
 import           Data.Oval
 
 data KBDate = KBDate { _kbdPosted      :: Day

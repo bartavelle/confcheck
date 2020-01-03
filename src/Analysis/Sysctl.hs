@@ -3,7 +3,8 @@ module Analysis.Sysctl (anaSysctl, wrongSysctl) where
 
 
 import           Analysis.Common
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Vulnerability
 
 import           Control.Monad
 import           Data.Maybe

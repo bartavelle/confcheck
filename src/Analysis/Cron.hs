@@ -4,7 +4,8 @@ module Analysis.Cron (anaCrontab, anaUsercrontab) where
 import           Analysis.Common
 import           Analysis.Parsers
 import           Analysis.Shell
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Cron
 
 import           Data.Char            (isSpace)
 import           Data.Sequence        (Seq)

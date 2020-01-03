@@ -3,7 +3,9 @@ module Analysis.Ipaddr (anaIpaddr) where
 
 import           Analysis.Common
 import           Analysis.Parsers
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Helpers     (CError (..))
+import           Analysis.Types.Network
 
 import           Control.Lens
 import           Control.Monad
@@ -96,4 +98,3 @@ appendInfo (LocalState curseq curretr) ln =
       Right (Problem plm) -> LocalState (curseq <> plm) curretr
       Right (NewIf nif) -> LocalState (curseq <> flushRetrieved curretr) nif
       Left rr -> LocalState (curseq <> Seq.singleton (parseErrorToConfigInfo  (Just "ip addr list") rr)) curretr
-

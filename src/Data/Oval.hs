@@ -29,21 +29,22 @@ module Data.Oval ( parseOvalStream
                  ) where
 
 import           Control.Applicative
-import           Control.Lens         hiding (element, op)
+import           Control.Lens                 hiding (element, op)
 import           Control.Monad
-import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy         as BSL
 import           Data.Hashable
-import qualified Data.HashMap.Strict  as HM
-import           Data.Maybe           (catMaybes, fromMaybe)
-import           Data.Serialize       (Serialize (..))
-import qualified Data.Text            as T
+import qualified Data.HashMap.Strict          as HM
+import           Data.Maybe                   (catMaybes, fromMaybe)
+import           Data.Serialize               (Serialize (..))
+import qualified Data.Text                    as T
 import           Data.Time.Calendar
-import           GHC.Generics         hiding (to)
-import qualified Text.Parsec.Pos      as P
-import qualified Text.Parsec.Prim     as P
-import           Text.Read            (readMaybe)
+import           GHC.Generics                 hiding (to)
+import qualified Text.Parsec.Pos              as P
+import qualified Text.Parsec.Prim             as P
+import           Text.Read                    (readMaybe)
 
-import           Analysis.Types
+import           Analysis.Types.Package
+import           Analysis.Types.Vulnerability
 import           Data.Condition
 import           Data.Parsers.Xml
 import           Debug.Trace

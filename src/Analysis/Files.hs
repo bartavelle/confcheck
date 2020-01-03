@@ -1,38 +1,54 @@
 {-# LANGUAGE BangPatterns  #-}
 {-# LANGUAGE RankNTypes    #-}
 {-# LANGUAGE TupleSections #-}
-module Analysis.Files (anaFilesNG, anaFilesOld, analyzeFS, normalFilepath, lineOld, lineNG', nhe, getParent, parseOldPerms) where
+module Analysis.Files
+  ( anaFilesNG
+  , anaFilesOld
+  , analyzeFS
+  , normalFilepath
+  , lineOld
+  , lineNG'
+  , nhe
+  , getParent
+  , parseOldPerms
+  ) where
 
 import           Control.Dependency
 import           Control.Lens
 import           Control.Monad
 import           Control.Parallel.Strategies
-import qualified Data.ByteString             as BSB
-import qualified Data.ByteString.Char8       as BS
-import qualified Data.CompactMap             as CM
+import qualified Data.ByteString              as BSB
+import qualified Data.ByteString.Char8        as BS
+import qualified Data.CompactMap              as CM
 import           Data.Either
-import qualified Data.Foldable               as F
-import qualified Data.HashMap.Strict         as HM
+import qualified Data.Foldable                as F
+import qualified Data.HashMap.Strict          as HM
 import           Data.List
-import qualified Data.Map.Strict             as M
-import qualified Data.Maybe.Strict           as S
-import           Data.Sequence               (Seq)
+import qualified Data.Map.Strict              as M
+import qualified Data.Maybe.Strict            as S
+import           Data.Sequence                (Seq)
 import           Data.Sequence.Lens
-import           Data.Text                   (Text)
-import qualified Data.Text.Encoding          as T
-import qualified Data.Thyme                  as Y
-import qualified Data.Thyme.Time.Core        as Y
-import           Data.Word                   (Word8)
+import           Data.Text                    (Text)
+import qualified Data.Text.Encoding           as T
+import qualified Data.Thyme                   as Y
+import qualified Data.Thyme.Time.Core         as Y
+import           Data.Word                    (Word8)
 import           System.FilePath
 
 import           Analysis.Common
 import           Analysis.Files.Conditions
 import           Analysis.Sudoers
-import           Analysis.Types
+import           Analysis.Types.ConfigInfo
+import           Analysis.Types.Cron
+import           Analysis.Types.File
+import           Analysis.Types.Helpers       (CError (..))
+import           Analysis.Types.Sudo
+import           Analysis.Types.UnixUsers
+import           Analysis.Types.Vulnerability
 import           ByteString.Parser.Fast
-import qualified ByteString.Parser.Fast      as F
+import qualified ByteString.Parser.Fast       as F
 import           Data.Condition
-import           Data.Parsers.Atto           (englishMonthToInt)
+import           Data.Parsers.Atto            (englishMonthToInt)
 
 isDigitFast :: Word8 -> Bool
 isDigitFast x = x >= 0x30 && x <= 0x39
@@ -252,4 +268,3 @@ completeLink cwd lnk | BS.null lnk = cwd
                      | otherwise = case getParent cwd of
                                       S.Just p  -> p <> "/" <> lnk
                                       S.Nothing -> "/" <> lnk
-

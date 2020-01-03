@@ -14,7 +14,7 @@ import           Data.Textual    (toText)
 import           Network.IP.Addr
 
 import           Analysis.Fiche
-import           Analysis.Types
+import           Analysis.Types.Network
 
 data PT = PTCP | PUDP
         deriving (Show, Eq, Ord)
