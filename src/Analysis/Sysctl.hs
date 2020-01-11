@@ -52,6 +52,6 @@ wrongSysctl = Seq.fromList . mapMaybe (uncurry checkSysctl)
 checkSysctl :: Text -> Text -> Maybe Vulnerability
 checkSysctl key value = either Just (const Nothing) (mapM_ checkSysctl' checks)
     where
-        checkSysctl' (pattern, expected, severity, desc) = when (match pattern key && value /= expected)
-                                                                (Left (Vulnerability severity (WrongSysctl key value expected desc)))
+        checkSysctl' (pattrn, expected, severity, desc) = when (match pattrn key && value /= expected)
+                                                               (Left (Vulnerability severity (WrongSysctl (WS key value expected desc))))
 

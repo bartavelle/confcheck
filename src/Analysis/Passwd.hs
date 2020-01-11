@@ -91,11 +91,11 @@ analyzeUnixUsers vulns = analyzeUnixUsers' pwd sha grp sud rh
         rh  = toListOf (folded . _ConfigInformation . _CRhost ) vulns
 
 analyzeUnixUsers' :: Seq PasswdEntry -> Seq ShadowEntry -> Seq GroupEntry -> Seq (Condition Sudo) -> [Rhost] -> Seq Vulnerability
-analyzeUnixUsers' pwds shas grps sud rh = checkMultiple shas shadowUsername (MultipleShadow "username")
-                                       <> checkMultiple grps groupName      (MultipleGroup  "groupname")
-                                       <> checkMultiple grps groupGid       (MultipleGroup  "gid")
-                                       <> checkMultiple pwds pwdUsername    (MultipleUser   "username")
-                                       <> checkMultiple pwds pwdUid         (MultipleUser   "uid")
+analyzeUnixUsers' pwds shas grps sud rh = checkMultiple shas shadowUsername (MultipleShadow . Multiple "username")
+                                       <> checkMultiple grps groupName      (MultipleGroup  . Multiple "groupname")
+                                       <> checkMultiple grps groupGid       (MultipleGroup  . Multiple "gid")
+                                       <> checkMultiple pwds pwdUsername    (MultipleUser   . Multiple "username")
+                                       <> checkMultiple pwds pwdUid         (MultipleUser   . Multiple "uid")
                                        <> Seq.fromList (map (Vulnerability High . VRhost) (filter (has (rhostSrc . _Nothing)) rh))
                                        <> F.foldMap analyzeUser unixusers
     where

@@ -38,9 +38,9 @@ runAnalyze unix arch packagemap (ovs, tests) = do
     guard matched
     (pkg, correctver) <- Seq.fromList pkgs
     let mvulnver = packagemap ^. at pkg
-    case mvulnver of
-        Nothing -> return $ Vulnerability sev $ OutdatedPackage pkg "zozo" (descRPMVersion correctver) day (Just (t <> "\n" <> d))
-        Just vulnver -> return $ Vulnerability sev $ OutdatedPackage pkg (descRPMVersion vulnver) (descRPMVersion correctver) day (Just (t <> "\n" <> d))
+    return $ Vulnerability sev $ OutdatedPackage $ case mvulnver of
+        Nothing -> OP pkg "zozo" (descRPMVersion correctver) day (Just (t <> "\n" <> d))
+        Just vulnver -> OP pkg (descRPMVersion vulnver) (descRPMVersion correctver) day (Just (t <> "\n" <> d))
 
 mkrpmmap :: Seq ConfigInfo -> M.Map T.Text RPMVersion
 mkrpmmap = M.fromList . toListOf (folded . _SoftwarePackage . to mrpm . folded)

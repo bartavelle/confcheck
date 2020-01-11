@@ -103,8 +103,8 @@ regroupPackages :: Seq Vulnerability -> M.Map RPMVersion PackageUniqInfo
 regroupPackages = M.fromListWith (<>) . mapMaybe mkp . F.toList
     where
         prpm = parseRPMVersion . T.unpack
-        mkp (Vulnerability s (OutdatedPackage p sv pv d md)) = Just ( prpm sv , PackageUniqInfo s d (prpm pv) [p] (md ^.. folded . to (d,prpm pv,s,)) )
-        mkp (Vulnerability s (MissingPatch ttl d desc)) = Just (fromString (T.unpack ttl), PackageUniqInfo s d "" (desc ^.. folded) [(d, "", s, desc ^. folded)])
+        mkp (Vulnerability s (OutdatedPackage (OP p sv pv d md))) = Just ( prpm sv , PackageUniqInfo s d (prpm pv) [p] (md ^.. folded . to (d,prpm pv,s,)) )
+        mkp (Vulnerability s (MissingPatch (MP ttl d desc))) = Just (fromString (T.unpack ttl), PackageUniqInfo s d "" (desc ^.. folded) [(d, "", s, desc ^. folded)])
         mkp x = error ("regroupPackages, new type of package entry: " ++ show x)
 
 regroupVulnByType :: Seq Vulnerability -> M.Map VulnGroup (Seq Vulnerability)
@@ -333,7 +333,7 @@ ficheData res
                               x:_ -> x
         unixversion = fromRes (UnixVersion (Unk "???") []) (_ConfigInformation . _UVersion)
         packages = sort $ mapMaybe getPackageInfo $ F.toList res
-        getPackageInfo (Vulnerability s (OutdatedPackage desc installed patchver pubdate _)) = Just (pubdate, s, desc, installed, patchver)
+        getPackageInfo (Vulnerability s (OutdatedPackage (OP desc installed patchver pubdate _))) = Just (pubdate, s, desc, installed, patchver)
         getPackageInfo _ = Nothing
         regrouped = regroupvulns res
         packageVulnMap = regrouped ^. ix GPackages . _RPack

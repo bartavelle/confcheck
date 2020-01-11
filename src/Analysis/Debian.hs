@@ -58,9 +58,9 @@ runOvalAnalyze uv arch sourcemap (ovs, tests) = do
     (pkg, correctver) <- Seq.fromList pkgs
     let mvulnver = packagemap ^? ix pkg
         vshow = T.pack . show . prettyDebianVersion
-    case mvulnver of
-      Nothing -> return $ Vulnerability sev $ OutdatedPackage pkg "zozo" (vshow correctver) day (Just (t <> "\n" <> d))
-      Just vulnver -> return $ Vulnerability sev $ OutdatedPackage pkg (vshow vulnver) (vshow correctver) day (Just (t <> "\n" <> d))
+    return $ Vulnerability sev $ OutdatedPackage $ case mvulnver of
+      Nothing -> OP pkg "zozo" (vshow correctver) day (Just (t <> "\n" <> d))
+      Just vulnver -> OP pkg (vshow vulnver) (vshow correctver) day (Just (t <> "\n" <> d))
 
 postDebAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
                 -> Seq ConfigInfo

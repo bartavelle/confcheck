@@ -8,6 +8,7 @@ import           Analysis.Solaris
 import           Analysis.Types.Helpers       (AuditFileType (..))
 import           Analysis.Types.Vulnerability
 import           Data.Microsoft
+import           Reports                      (DisplayMode (..), showReport)
 
 import           Control.Lens
 import           Control.Monad
@@ -19,7 +20,7 @@ import           Options.Applicative
 
 import           Prelude
 
-data Options = Options RunMode [FilePath]
+data Options = Options DisplayMode RunMode [FilePath]
     deriving Show
 
 data RunMode
@@ -29,8 +30,9 @@ data RunMode
     deriving (Show, Eq, Ord, Enum, Bounded)
 
 options :: Parser Options
-options = Options <$> runmode <*> some file
+options = Options <$> displaymode <*> runmode <*> some file
   where
+    displaymode = pure Ansi
     parseMode = maybeReader $ \case
         "csv"      -> Just CSV
         "patches"  -> Just Patches
@@ -51,7 +53,7 @@ main = do
                              <> progDesc "Analyzes configuration dumps"
                              <> header "confcheck-exe - analyze configuration dumps"
                              )
-    Options runmode files <- execParser commandParser
+    Options dmode runmode files <- execParser commandParser
     xdiag      <- mkOnce (loadPatchDiag "sources/patchdiag.xref")
     ov   <- ovalOnce "serialized"
     okbd <- mkOnce (loadKBDays "serialized/BulletinSearch.serialized")
@@ -62,16 +64,16 @@ main = do
       Patches -> do
         res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) files
         let missings = res ^.. traverse . _Vulnerability . aside _OutdatedPackage
-            toPatchRecord (sev, (titre, installed, patched, pub, _))
+            toPatchRecord (sev, OP titre installed patched pub _)
               = [show pub, show sev, T.unpack titre, T.unpack installed, T.unpack patched]
 
         BSL.putStrLn (encode (map toPatchRecord (F.toList missings)))
-      Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> mapM_ print) files
+      Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> showReport dmode) files
 
 toRecord :: Vulnerability -> [String]
 toRecord v
   = case v of
-      Vulnerability sev (OutdatedPackage titre installed patched pub mtest)
+      Vulnerability sev (OutdatedPackage (OP titre installed patched pub mtest))
         -> ["Patch", show sev, T.unpack titre, T.unpack installed, T.unpack patched, show pub, maybe mempty T.unpack mtest]
       Vulnerability sev det -> ["Vulnerabilité", show sev, show det]
       ConfigInformation det -> ["Information", "", show det]

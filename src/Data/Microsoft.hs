@@ -59,7 +59,8 @@ analyzeMBSAContent ody fp content = either (mkerr fp) Seq.fromList <$> (analyzeM
                 parsed = parseStream "mbsa.xml" (BSL.fromChunks [content]) mbsa
                 toVulnerability (MBSA mid mkb mtitle _ _ _ _ sev) =
                     let (bulletinid, day) = findKBInfo mkb mp
-                    in  Vulnerability sev (MissingPatch (mid <> "/KB" <> T.toText mkb) day (Just (bulletinid <> " " <> mtitle)))
+                        miss = MP (mid <> "/KB" <> T.toText mkb) day (Just (bulletinid <> " " <> mtitle))
+                    in  Vulnerability sev (MissingPatch miss)
 
 analyzeMBSA :: Once (IM.IntMap (T.Text, Day)) -> FilePath -> IO (Seq Vulnerability)
 analyzeMBSA ody fp = BS.readFile fp >>= analyzeMBSAContent ody fp
@@ -89,7 +90,8 @@ analyzeMissingKBsContent ody fp filecontent = do
                         "Low"       -> Low
                         _           -> None
                 (bulletinid, day) = findKBInfo nkb mp
-            return $ Vulnerability crit (MissingPatch ("KB" <> tkb) day (Just (bulletinid <> " " <> title)))
+            let miss = MP ("KB" <> tkb) day (Just (bulletinid <> " " <> title))
+            return $ Vulnerability crit $ MissingPatch miss
         mresult = mapM toVulnerability . filter (T.isInfixOf "(KB") . T.lines
     return (either (mkerr fp) Seq.fromList (mresult (T.decodeLatin1 filecontent)))
 
