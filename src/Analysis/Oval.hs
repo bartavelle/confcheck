@@ -19,6 +19,7 @@ import qualified Data.Serialize                   as S
 import qualified Data.Text                        as T
 import qualified Data.Text.Encoding               as T
 import           Data.Time.Calendar
+import           Debug.Trace                      (trace)
 import           Text.Regex.PCRE.ByteString.Utils
 
 import           Analysis.Common
@@ -144,3 +145,40 @@ enrichOval cve = map addTime
                                  Nothing -> d & ovalRelease .~ defaultDay title
         addTime d | d ^. ovalRelease == epoch = findCveInRef d
         addTime d = d
+
+-- | From the base of the "serialized" directory, load all know ovals and
+-- return the dispatch function.
+ovalOnce
+  :: FilePath
+  -> IO (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
+ovalOnce serdir = do
+  let ld f = mkOnce . loadOvalSerialized $ serdir ++ "/" ++ f
+  rhoval     <- ld "com.redhat.rhsa-all.xml"
+  s11oval    <- ld "suse.linux.enterprise.server.11.xml"
+  os122oval  <- ld "opensuse.12.2.xml"
+  os123oval  <- ld "opensuse.12.3.xml"
+  os132oval  <- ld "opensuse.13.2.xml"
+  ubuntu1404 <- ld "com.ubuntu.trusty.cve.oval.xml"
+  ubuntu1604 <- ld "com.ubuntu.xenial.cve.oval.xml"
+  ubuntu1804 <- ld "com.ubuntu.bionic.cve.oval.xml"
+  deb7       <- ld "oval-definitions-wheezy.xml"
+  deb8       <- ld "oval-definitions-jessie.xml"
+  deb9       <- ld "oval-definitions-stretch.xml"
+  deb10      <- ld "oval-definitions-buster.xml"
+  let ov v = case v of
+                 UnixVersion SuSE (11:_)     -> Just s11oval
+                 UnixVersion RedHatLinux _   -> Just rhoval
+                 UnixVersion RHEL _          -> Just rhoval
+                 UnixVersion CentOS _        -> Just rhoval
+                 UnixVersion OpenSuSE [12,2] -> Just os122oval
+                 UnixVersion OpenSuSE [12,3] -> Just os123oval
+                 UnixVersion OpenSuSE [13,2] -> Just os132oval
+                 UnixVersion Ubuntu [14,4]   -> Just ubuntu1404
+                 UnixVersion Ubuntu [16,4]   -> Just ubuntu1604
+                 UnixVersion Ubuntu [18,4]   -> Just ubuntu1804
+                 UnixVersion Debian [7,_]    -> Just deb7
+                 UnixVersion Debian [8,_]    -> Just deb8
+                 UnixVersion Debian [9,_]    -> Just deb9
+                 UnixVersion Debian [10,_]   -> Just deb10
+                 _ -> trace ("Unknown os " ++ show v) Nothing
+  return ov
