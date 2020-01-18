@@ -308,6 +308,7 @@ ficheData res
               latestPatch
               miscVulns
               (buildNetApps (regrouped ^. ix GNet . _RNet . _1) (regrouped ^. ix GNet . _RNet . _2))
+              (regrouped ^? ix GInfo . _RV . folded . _ConfigInformation . _Hostname)
     where
         alreadyKnown = [ hasn't (_ConfigInformation . _ConfPass)
                        , hasn't (_ConfigInformation . _ConfShadow)

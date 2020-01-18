@@ -8,19 +8,23 @@ import           Analysis.Solaris
 import           Analysis.Types.Helpers       (AuditFileType (..))
 import           Analysis.Types.Vulnerability
 import           Data.Microsoft
-import           Reports                      (DisplayMode (..), showReport)
+import           Reports                      (DisplayMode (..),
+                                               ReportSection (..),
+                                               defaultSections, showReport)
 
 import           Control.Lens
 import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8   as BSL
 import           Data.Csv                     (encode)
 import qualified Data.Foldable                as F
+import           Data.List
+import qualified Data.Set                     as S
 import qualified Data.Text                    as T
 import           Options.Applicative
 
 import           Prelude
 
-data Options = Options DisplayMode RunMode [FilePath]
+data Options = Options [ReportSection] DisplayMode RunMode [FilePath]
     deriving Show
 
 data RunMode
@@ -29,8 +33,29 @@ data RunMode
     | Patches
     deriving (Show, Eq, Ord, Enum, Bounded)
 
+data Switch x
+    = Enable x
+    | Disable x
+    deriving (Show, Eq)
+
+sections :: Parser [ReportSection]
+sections = S.toList . foldl' applySwitch defaultSections <$> many sectionflag
+  where
+    sectionflag = F.asum (map mkSecOption [minBound .. maxBound])
+    mkSecOption sec
+      = let secname = drop 7 (show sec)
+            (optname, switcher, desc) =
+              if S.member sec defaultSections
+                then ("without", Disable, "Disable")
+                else ("with", Enable, "Enable")
+        in  flag' (switcher sec) (long (optname <> secname) <> help (desc <> " reporting of section " <> secname))
+    applySwitch cursections sw =
+      case sw of
+        Enable x -> S.insert x cursections
+        Disable x -> S.delete x cursections
+
 options :: Parser Options
-options = Options <$> displaymode <*> runmode <*> some file
+options = Options <$> sections <*> displaymode <*> runmode <*> some file
   where
     displaymode = pure Ansi
     parseMode = maybeReader $ \case
@@ -53,7 +78,7 @@ main = do
                              <> progDesc "Analyzes configuration dumps"
                              <> header "confcheck-exe - analyze configuration dumps"
                              )
-    Options dmode runmode files <- execParser commandParser
+    Options secs dmode runmode files <- execParser commandParser
     xdiag      <- mkOnce (loadPatchDiag "sources/patchdiag.xref")
     ov   <- ovalOnce "serialized"
     okbd <- mkOnce (loadKBDays "serialized/BulletinSearch.serialized")
@@ -68,7 +93,7 @@ main = do
               = [show pub, show sev, T.unpack titre, T.unpack installed, T.unpack patched]
 
         BSL.putStrLn (encode (map toPatchRecord (F.toList missings)))
-      Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> showReport dmode) files
+      Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> showReport dmode secs) files
 
 toRecord :: Vulnerability -> [String]
 toRecord v
