@@ -10,5 +10,5 @@ extra-deps:
   - hexpat-tagsoup-0.1@sha256:0e6dfae74d22b05c8d544d59c8c0a84cffbdfce65bdf410f4e3353c9b8789e36,1344
   - parsers-megaparsec-0.1.0.1@sha256:2ebe722e6468bdfa1c236e2106815b0132e152eada60607f1f5f607a5f759037,1670
   - stateWriter-0.2.10@sha256:26262ab5c6c6c07476c43517be2d10d93d99d5e7493a0e386ec599293c3ff7a7,2113
-  - withdependencies-0.2.5@sha256:8d381c4f95f195e8aca5f92e32af26f9a569c7acc90606ad5078d58750b54f6b,1796
+  - withdependencies-0.3.0
   - ShellCheck-0.6.0

@@ -89,7 +89,7 @@ library
                      , stateWriter
                      , transformers
                      , yaml
-                     , withdependencies
+                     , withdependencies >= 0.3.0
                      , vector-space
                      , ShellCheck
                      , confcheck-types

@@ -165,16 +165,18 @@ genvt (ConfigInformation x) = case x of
 genvt x = error ("genvt not implemented for " <> show x)
 
 configExtract :: [(R.RunMode, Analyzer (Seq ConfigInfo))]
-configExtract = map (R.Once,) once <> map (R.Reset,) reset
+configExtract = map (R.OnceCorrect,) corrects <> map (R.Once,) once <> map (R.Reset,) reset
     where
         mk a = fmap (return . a)
+        corrects =
+          [ mk UVersion unixVersion
+          ]
         reset = [ anaUsercrontab
                 , anaCrontab
                 , anasudo
                 , anaRhosts
                 ]
-        once = mk UVersion unixVersion
-             : anaPkgInfo
+        once = anaPkgInfo
              : anaShowRev
              : anaNetstat
              : anaFilesNG
