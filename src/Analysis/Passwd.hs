@@ -26,8 +26,6 @@ import           Analysis.Types.Vulnerability
 
 import           Data.Common                  (regroupMap)
 
-import           Prelude
-
 r :: T.Text -> Int
 r x = case T.decimal x of
           Right (n, "") -> n
