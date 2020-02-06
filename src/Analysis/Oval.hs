@@ -15,6 +15,7 @@ import qualified Data.HashMap.Strict              as HM
 import           Data.List                        (intercalate)
 import qualified Data.Map.Strict                  as M
 import           Data.Maybe                       (fromMaybe, mapMaybe)
+import           Data.Sequence                    (Seq)
 import qualified Data.Serialize                   as S
 import qualified Data.Text                        as T
 import qualified Data.Text.Encoding               as T
@@ -23,6 +24,7 @@ import           Debug.Trace                      (trace)
 import           Text.Regex.PCRE.ByteString.Utils
 
 import           Analysis.Common
+import           Analysis.Types.ConfigInfo        (ConfigInfo, extractArch, extractVersion)
 import           Analysis.Types.Package
 import           Analysis.Types.Unix
 import           Analysis.Types.Vulnerability
@@ -42,7 +44,7 @@ getPackageinfo x = case reverse (T.splitOn "-" x) of
 
 defaultDay :: T.Text -> Day
 defaultDay t = case preview (ix 1) (T.splitOn "-" t) >>= text2Int of
-                   Just y  -> fromGregorian (fromIntegral y) 1 1
+                   Just y -> fromGregorian (fromIntegral y) 1 1
                    Nothing -> epoch
 
 loadOvalSerialized :: FilePath -> IO ([OvalDefinition], HM.HashMap OTestId OFullTest)
@@ -50,7 +52,7 @@ loadOvalSerialized f = do
     cnt <- BS.readFile f
     case S.decode cnt of
         Right (r, l) -> return (r, HM.fromList l)
-        Left rr      -> error ("loadOvalSerialized: " ++ rr)
+        Left rr -> error ("loadOvalSerialized: " ++ rr)
 
 -- ^ Le paramètre des packages debians est un peu particulier, car les
 -- fichiers oval se basent sur le nom du package *source*
@@ -82,7 +84,7 @@ ovalRuleMatched :: UnixVersion
                 -> (Bool, [(T.Text, Either DebianVersion RPMVersion)])
 ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests = tolst . matchingConditions check' . view ovalCond
     where
-        tolst Nothing    = (False, [])
+        tolst Nothing = (False, [])
         tolst (Just lst) = (True, concat lst)
         check' testid = HM.lookup testid tests >>= runtest
             where
@@ -150,11 +152,13 @@ enrichOval cve = map addTime
         addTime d | d ^. ovalRelease == epoch = findCveInRef d
         addTime d = d
 
+type OvalContent = ([OvalDefinition], HM.HashMap OTestId OFullTest)
+
 -- | From the base of the "serialized" directory, load all know ovals and
 -- return the dispatch function.
 ovalOnce
   :: FilePath
-  -> IO (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
+  -> IO (UnixVersion -> Maybe (Once OvalContent))
 ovalOnce serdir = do
   let ld f = mkOnce . loadOvalSerialized $ serdir ++ "/" ++ f
   rhoval     <- ld "com.redhat.rhsa-all.xml"
@@ -170,19 +174,36 @@ ovalOnce serdir = do
   deb9       <- ld "oval-definitions-stretch.xml"
   deb10      <- ld "oval-definitions-buster.xml"
   let ov v = case v of
-                 UnixVersion SuSE (11:_)     -> Just s11oval
-                 UnixVersion RedHatLinux _   -> Just rhoval
-                 UnixVersion RHEL _          -> Just rhoval
-                 UnixVersion CentOS _        -> Just rhoval
+                 UnixVersion SuSE (11:_) -> Just s11oval
+                 UnixVersion RedHatLinux _ -> Just rhoval
+                 UnixVersion RHEL _ -> Just rhoval
+                 UnixVersion CentOS _ -> Just rhoval
                  UnixVersion OpenSuSE [12,2] -> Just os122oval
                  UnixVersion OpenSuSE [12,3] -> Just os123oval
                  UnixVersion OpenSuSE [13,2] -> Just os132oval
-                 UnixVersion Ubuntu [14,4]   -> Just ubuntu1404
-                 UnixVersion Ubuntu [16,4]   -> Just ubuntu1604
-                 UnixVersion Ubuntu [18,4]   -> Just ubuntu1804
-                 UnixVersion Debian [7,_]    -> Just deb7
-                 UnixVersion Debian [8,_]    -> Just deb8
-                 UnixVersion Debian [9,_]    -> Just deb9
-                 UnixVersion Debian [10,_]   -> Just deb10
+                 UnixVersion Ubuntu [14,4] -> Just ubuntu1404
+                 UnixVersion Ubuntu [16,4] -> Just ubuntu1604
+                 UnixVersion Ubuntu [18,4] -> Just ubuntu1804
+                 UnixVersion Debian [7,_] -> Just deb7
+                 UnixVersion Debian [8,_] -> Just deb8
+                 UnixVersion Debian [9,_] -> Just deb9
+                 UnixVersion Debian [10,_] -> Just deb10
                  _ -> trace ("Unknown os " ++ show v) Nothing
   return ov
+
+postOvalAnalysis
+  :: Foldable t
+  => (Seq ConfigInfo -> t packageinfo)
+  -> (UnixVersion -> T.Text -> t packageinfo -> OvalContent -> Seq Vulnerability)
+  -> (UnixVersion -> Maybe (Once OvalContent))
+  -> Seq ConfigInfo
+  -> IO (Seq Vulnerability)
+postOvalAnalysis mkmap analyzer oval ce =
+    if null pkgmap
+      then pure mempty
+      else fromMaybe (pure patchAnalysisNotRun) $ do
+        v <- extractVersion ce
+        arch <- extractArch ce
+        ov <- oval v
+        pure (analyzer v arch pkgmap <$> getOnce ov)
+  where pkgmap = mkmap ce

@@ -52,12 +52,4 @@ postRPMAnalysis
   :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
   -> Seq ConfigInfo
   -> IO (Seq Vulnerability)
-postRPMAnalysis oval ce =
-    if null rpmmap
-      then pure mempty
-      else fromMaybe (pure patchAnalysisNotRun) $ do
-        v <- extractVersion ce
-        arch <- extractArch ce
-        ov <- oval v
-        pure (runAnalyze v arch rpmmap <$> getOnce ov)
-  where rpmmap = mkrpmmap ce
+postRPMAnalysis = postOvalAnalysis mkrpmmap runAnalyze

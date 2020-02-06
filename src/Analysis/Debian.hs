@@ -6,7 +6,7 @@
 module Analysis.Debian (listDebs, postDebAnalysis, loadSerializedCVE) where
 
 import           Analysis.Common
-import           Analysis.Oval                (ovalRuleMatchedDEB)
+import           Analysis.Oval                (ovalRuleMatchedDEB, postOvalAnalysis)
 import           Analysis.Types.ConfigInfo
 import           Analysis.Types.Package
 import           Analysis.Types.Unix
@@ -21,7 +21,7 @@ import           Data.DebianVersion
 import qualified Data.HashMap.Strict          as HM
 import           Data.List.Split              (splitWhen)
 import qualified Data.Map.Strict              as M
-import           Data.Maybe                   (fromMaybe, mapMaybe)
+import           Data.Maybe                   (mapMaybe)
 import           Data.Sequence                (Seq)
 import qualified Data.Sequence                as Seq
 import qualified Data.Serialize               as S
@@ -63,15 +63,7 @@ runOvalAnalyze uv arch sourcemap (ovs, tests) = do
 postDebAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
                 -> Seq ConfigInfo
                 -> IO (Seq Vulnerability)
-postDebAnalysis oval ce =
-    if null debmap
-      then pure mempty
-      else fromMaybe (pure patchAnalysisNotRun) $ do
-        v <- extractVersion ce
-        arch <- extractArch ce
-        ov <- oval v
-        pure (runOvalAnalyze v arch debmap <$> getOnce ov)
-  where debmap = mkdebmap ce
+postDebAnalysis = postOvalAnalysis mkdebmap runOvalAnalyze
 
 parseDpkgStatus :: Text -> [SoftwarePackage]
 parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMultilines . T.lines
