@@ -48,11 +48,16 @@ mkrpmmap = M.fromList . toListOf (folded . _SoftwarePackage . to mrpm . folded)
         mrpm (Package p v PRPM) = Just (p, parseRPMVersion (T.unpack v))
         mrpm _                  = Nothing
 
-postRPMAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest))) -> Seq ConfigInfo -> IO (Seq Vulnerability)
-postRPMAnalysis ovaldispatch ce =
-    case (,) <$> extractVersion ce <*> extractArch ce of
-        Just (v, arch) ->
-          case ovaldispatch v of
-            Just ov -> runAnalyze v arch (mkrpmmap ce) <$> getOnce ov
-            Nothing -> return mempty
-        _ -> return mempty
+postRPMAnalysis
+  :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest)))
+  -> Seq ConfigInfo
+  -> IO (Seq Vulnerability)
+postRPMAnalysis oval ce =
+    if null rpmmap
+      then pure mempty
+      else fromMaybe (pure patchAnalysisNotRun) $ do
+        v <- extractVersion ce
+        arch <- extractArch ce
+        ov <- oval v
+        pure (runAnalyze v arch rpmmap <$> getOnce ov)
+  where rpmmap = mkrpmmap ce

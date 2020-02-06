@@ -59,7 +59,7 @@ newtype OTestId = OTestId T.Text
                  deriving (Show, Eq, Hashable, Serialize)
 
 data OReference = OReference { _orSource :: T.Text
-                             , _orRefid  :: T.Text
+                             , _orRefid :: T.Text
                              , _orRefurl :: T.Text
                              } deriving (Show, Generic)
 
@@ -67,14 +67,14 @@ data Operator = CritAnd
               | CritOr
               deriving Show
 
-data OvalDefinition = OvalDefinition { _ovalId         :: T.Text
-                                     , _ovalTitle      :: T.Text
+data OvalDefinition = OvalDefinition { _ovalId :: T.Text
+                                     , _ovalTitle :: T.Text
                                      , _ovalReferences :: [OReference]
-                                     , _ovalDesc       :: T.Text
-                                     , _ovalCond       :: Condition OTestId
-                                     , _ovalSeverity   :: Severity
-                                     , _ovalLine       :: Int
-                                     , _ovalRelease    :: Day
+                                     , _ovalDesc :: T.Text
+                                     , _ovalCond :: Condition OTestId
+                                     , _ovalSeverity :: Severity
+                                     , _ovalLine :: Int
+                                     , _ovalRelease :: Day
                                      }
                                      deriving (Show, Generic)
 
@@ -93,14 +93,15 @@ data OvalTest = RpmInfoT !OTestId !ObjectId !StateId
               | Unhandled !OTestId !ObjectId !StateId !TestDetails
               | TestAlways !OTestId !Bool !T.Text -- why always?
               | VersionIs !OTestId !T.Text
+              | IVersionIs !OTestId ![Int]
               | MVersionIs !OTestId !Int
               deriving Show
 
 data TestDetails
     = TestDetails
-    { _tdName    :: T.Text
-    , _tdCheck   :: T.Text
-    , _tdCE      :: T.Text
+    { _tdName :: T.Text
+    , _tdCheck :: T.Text
+    , _tdCE :: T.Text
     , _tdComment :: T.Text
     } deriving Show
 
@@ -130,6 +131,7 @@ data TestType
     = RpmState       !RPMVersion
     | DpkgState      !(Maybe T.Text) !T.Text
     | Version        !T.Text
+    | IVersion       ![Int]
     | SignatureKeyId !T.Text
     | FamilyIs       !T.Text
     | UnameIs        !T.Text
@@ -142,7 +144,7 @@ data TestType
 data OFullTest
     = OFullTest
     { _ofulltestObject :: !T.Text
-    , _ofulltestOp     :: !OvalStateOp
+    , _ofulltestOp :: !OvalStateOp
     } deriving (Show, Generic)
 
 
@@ -163,18 +165,18 @@ criteria = lx (criterion <|> grp P.<?> "criteria")
 translateCriticity :: T.Text -> Either String Severity
 translateCriticity t =
     case t of
-      "Untriaged"  -> Right Unknown
-      ""           -> Right Unknown
-      "Not set"    -> Right Unknown
+      "Untriaged" -> Right Unknown
+      "" -> Right Unknown
+      "Not set" -> Right Unknown
       "Negligible" -> Right None
-      "None"       -> Right None
-      "Low"        -> Right Low
-      "Medium"     -> Right Medium
-      "Moderate"   -> Right Medium
-      "Critical"   -> Right High
-      "Important"  -> Right High
-      "High"       -> Right High
-      _            -> Left ("Unknown criticity " <> show t)
+      "None" -> Right None
+      "Low" -> Right Low
+      "Medium" -> Right Medium
+      "Moderate" -> Right Medium
+      "Critical" -> Right High
+      "Important" -> Right High
+      "High" -> Right High
+      _ -> Left ("Unknown criticity " <> show t)
 
 definition :: Parser (Maybe OvalDefinition)
 definition = lx $ element "definition" $ \args ->
@@ -220,7 +222,7 @@ definition = lx $ element "definition" $ \args ->
                        Just txt -> either fail return (translateCriticity txt)
               return $ (sev,) $ case catMaybes mdays of
                                     (x : _) -> x
-                                    _       -> fromGregorian 1970 1 1
+                                    _ -> fromGregorian 1970 1 1
           return (title', refs', desc', msev')
       P.skipMany $ ignoreElement "notes"
       crit <- criteria <|> pure (Always False)
@@ -305,9 +307,9 @@ unknownTest = UnknownT <$ ignoreElement "unknown_test"
 
 automaticResults :: HM.HashMap T.Text (OTestId -> OvalTest)
 automaticResults = HM.fromList
-  [ ("Is the host running Ubuntu trusty?", (`VersionIs` "14.04"))
-  , ("Is the host running Ubuntu xenial?", (`VersionIs` "16.04"))
-  , ("Is the host running Ubuntu bionic?", (`VersionIs` "18.04"))
+  [ ("Is the host running Ubuntu trusty?", (`IVersionIs` [14, 4]))
+  , ("Is the host running Ubuntu xenial?", (`IVersionIs` [16, 4]))
+  , ("Is the host running Ubuntu bionic?", (`IVersionIs` [18, 4]))
   , ("Debian GNU/Linux 10 is installed", (`MVersionIs` 10))
   , ("Debian GNU/Linux 9 is installed", (`MVersionIs` 9))
   , ("Debian GNU/Linux 8 is installed", (`MVersionIs` 8))
@@ -389,7 +391,7 @@ state = lx $ anyElement $ \ename mp -> do
               extractop (RpmState . parseRPMVersion . sanitizeVersion . T.unpack) emap
           sanitizeVersion x = case break (==':') x of
                                   (_, ':' : o) -> o
-                                  _            -> x
+                                  _ -> x
           version = element "version" (extractop Version)
           signatureKeyid = element "signature_keyid" (extractop SignatureKeyId)
           arch = element "arch" (extractop Arch)
@@ -419,24 +421,25 @@ parsedoc = lx $ element_ "oval_definitions" $ do
 parseOvalStream :: FilePath -> BSL.ByteString -> Either String ([OvalDefinition], HM.HashMap OTestId OFullTest)
 parseOvalStream filename l =
     case parseStream filename l (xml parsedoc <|> parsedoc) of
-      Left rr         -> Left rr
+      Left rr -> Left rr
       Right (d,t,p,s) -> (d,) . HM.fromList <$> mkTests t p s
 
 mkTests :: [OvalTest] -> [OvalObject] -> [OvalState] -> Either String [(OTestId, OFullTest)]
 mkTests tests objects states = catMaybes <$> mapM mkTest tests
     where
         getFromMap t mp = case HM.lookup t mp of
-                              Just x  -> Right x
+                              Just x -> Right x
                               Nothing -> Left ("Could not lookup " <> show t)
         mkTest :: OvalTest -> Either String (Maybe (OTestId, OFullTest))
         mkTest t = case t of
           TestAlways testid b w -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool b w) Equal))
-          RpmInfoT testid objectid stateid   -> go testid objectid stateid
-          FamilyT testid objectid stateid    -> go testid objectid stateid
-          UnameT testid objectid mstateid    -> mgo testid objectid mstateid
+          RpmInfoT testid objectid stateid -> go testid objectid stateid
+          FamilyT testid objectid stateid -> go testid objectid stateid
+          UnameT testid objectid mstateid -> mgo testid objectid mstateid
           DpkgInfoT testid objectid mstateid -> mgo testid objectid mstateid
-          VersionIs testid version          -> pure $ Just (testid, OFullTest "distribution" (OvalStateOp (Version version) Equal))
-          MVersionIs testid version          ->
+          VersionIs testid version -> pure $ Just (testid, OFullTest "distribution" (OvalStateOp (Version version) Equal))
+          IVersionIs testid version -> pure $ Just (testid, OFullTest "distribution" (OvalStateOp (IVersion version) Equal))
+          MVersionIs testid version ->
             pure $ Just (testid, OFullTest "distribution" (OvalStateOp (Version (reVersion version)) PatternMatch))
           UnknownT -> pure Nothing
           Unhandled{} -> Left ("Unknown test " ++ show t)
@@ -456,10 +459,10 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
                   pure $ Just (testid, OFullTest obj top)
         omap = HM.fromList $ map mkov objects
         mkov o = case o of
-                   RpmO oid t  -> if T.null t then error (show oid) else (oid, t)
+                   RpmO oid t -> if T.null t then error (show oid) else (oid, t)
                    DpkgO oid t -> if T.null t then error (show oid) else (oid, t)
                    FamilyO oid -> (oid, "")
-                   UnameO oid  -> (oid, "")
+                   UnameO oid -> (oid, "")
                    ReleaseCodenameO oid -> (oid, "")
                    FileContent oid _ _ _ -> (oid, "") -- TODO :(
         smap :: HM.HashMap StateId OvalStateOp

@@ -94,6 +94,10 @@ ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests = tolst . matchingCon
                       OvalStateOp testtype operation ->
                         case testtype of
                           SignatureKeyId _ -> Just []
+                          IVersion v | operation == Equal ->
+                            if uver == v
+                              then Just []
+                              else Nothing
                           Version v | operation == Equal ->
                             let v' = T.intercalate "." (map (T.pack . show) uver)
                             in  if v' == v

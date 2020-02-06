@@ -66,6 +66,7 @@ prettyFiche sections finfo = vsep (mapMaybe showSection sections ++ [mempty])
     showSection sec =
       case sec of
         SectionHeader -> Just (prettyHeader (_ficheHostname finfo) (_ficheOS finfo))
+        SectionProblems -> Just (prettyProblems finfo)
         _ -> Just ("TODO: " <+> fromString (show sec))
 
 prettyHeader :: Maybe Text -> UnixVersion -> Doc AnsiStyle
@@ -88,3 +89,20 @@ prettyUnixVersion (UnixVersion ut v) = put <+> pv
             WindowsServer x -> "Windows Server " <> pretty x
 
     pv = fromString (intercalate "." (map show v))
+
+text :: Text -> Doc AnsiStyle
+text = fromString . T.unpack
+
+prettyProblems :: FicheInfo -> Doc AnsiStyle
+prettyProblems finfo = vsep ("# PROBLEMS" : mpatches)
+  where
+    missing_patches = _fichePackages finfo
+    mpatches | null missing_patches = mempty
+             | otherwise = map showMissingPatch missing_patches
+    showMissingPatch (day, sev, desc, installed, patch) = indent 2 (
+        "[" <> fromString (show sev) <> "/" <> fromString (show day) <> "]"
+        <+> text desc
+        <+> text installed <+> "->" <+> text patch)
+
+
+

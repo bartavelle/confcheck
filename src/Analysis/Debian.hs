@@ -21,15 +21,13 @@ import           Data.DebianVersion
 import qualified Data.HashMap.Strict          as HM
 import           Data.List.Split              (splitWhen)
 import qualified Data.Map.Strict              as M
-import           Data.Maybe                   (mapMaybe)
+import           Data.Maybe                   (fromMaybe, mapMaybe)
 import           Data.Sequence                (Seq)
 import qualified Data.Sequence                as Seq
 import qualified Data.Serialize               as S
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Data.Time.Calendar
-
-import           Prelude
 
 loadSerializedCVE :: FilePath -> IO (M.Map T.Text (Day, Severity))
 loadSerializedCVE cveserial = do
@@ -66,12 +64,14 @@ postDebAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTe
                 -> Seq ConfigInfo
                 -> IO (Seq Vulnerability)
 postDebAnalysis oval ce =
-    maybe (pure mempty) (\(v, arch, ov) -> runOvalAnalyze v arch (mkdebmap ce) <$> getOnce ov) $ do
-      v <- extractVersion ce
-      ov <- oval v
-      arch <- extractArch ce
-      return (v,arch,ov)
-
+    if null debmap
+      then pure mempty
+      else fromMaybe (pure patchAnalysisNotRun) $ do
+        v <- extractVersion ce
+        arch <- extractArch ce
+        ov <- oval v
+        pure (runOvalAnalyze v arch debmap <$> getOnce ov)
+  where debmap = mkdebmap ce
 
 parseDpkgStatus :: Text -> [SoftwarePackage]
 parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMultilines . T.lines
