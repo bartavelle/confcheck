@@ -76,17 +76,18 @@ prettyUnixVersion :: UnixVersion -> Doc AnsiStyle
 prettyUnixVersion (UnixVersion ut v) = put <+> pv
   where
     put = case ut of
-            Debian          -> "Debian"
-            RHEL            -> "RedHat Enterprise Linux"
-            RedHatLinux     -> "RedHat"
-            CentOS          -> "CentOS"
-            SunOS           -> "SunOS"
-            SuSE            -> "SuSE"
-            OpenSuSE        -> "OpenSuSE"
-            Ubuntu          -> "Ubuntu"
-            Unk x           -> pretty x
+            Debian -> "Debian"
+            RHEL -> "RedHat Enterprise Linux"
+            RedHatLinux -> "RedHat"
+            CentOS -> "CentOS"
+            SunOS -> "SunOS"
+            SuSE -> "SuSE"
+            OpenSuSE -> "OpenSuSE"
+            Ubuntu -> "Ubuntu"
+            Unk x -> pretty x
             WindowsClient x -> "Windows Client " <> pretty x
             WindowsServer x -> "Windows Server " <> pretty x
+            Fedora -> "Fedora"
 
     pv = fromString (intercalate "." (map show v))
 
