@@ -1,4 +1,3 @@
-/sources
 /.shake
 .stack-work
 src/Data/Sql.hs
