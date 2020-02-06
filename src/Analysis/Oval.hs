@@ -166,6 +166,7 @@ ovalOnce serdir = do
   os122oval  <- ld "opensuse.12.2.xml"
   os123oval  <- ld "opensuse.12.3.xml"
   os132oval  <- ld "opensuse.13.2.xml"
+  osl151oval <- ld "opensuse.leap.15.1.xml"
   ubuntu1404 <- ld "com.ubuntu.trusty.cve.oval.xml"
   ubuntu1604 <- ld "com.ubuntu.xenial.cve.oval.xml"
   ubuntu1804 <- ld "com.ubuntu.bionic.cve.oval.xml"
@@ -188,6 +189,7 @@ ovalOnce serdir = do
                  UnixVersion Debian [8,_] -> Just deb8
                  UnixVersion Debian [9,_] -> Just deb9
                  UnixVersion Debian [10,_] -> Just deb10
+                 UnixVersion OpenSUSELeap [15,1] -> Just osl151oval
                  _ -> trace ("Unknown os " ++ show v) Nothing
   return ov
 

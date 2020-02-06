@@ -117,6 +117,7 @@ ovalSources =
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.trusty.cve.oval.xml"      False
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.xenial.cve.oval.xml"      False
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.bionic.cve.oval.xml"      False
+    , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.1.xml"                   True
     ]
 
 downloadSource :: DlSource -> Action ()

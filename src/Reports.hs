@@ -92,6 +92,7 @@ prettyUnixVersion (UnixVersion ut v) = put <+> pv
             WindowsClient x -> "Windows Client " <> pretty x
             WindowsServer x -> "Windows Server " <> pretty x
             Fedora -> "Fedora"
+            OpenSUSELeap -> "openSUSE Leap"
 
     pv = fromString (intercalate "." (map show v))
 
