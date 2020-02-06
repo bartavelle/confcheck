@@ -150,6 +150,7 @@ fi
   cat /proc/version > version.txt
   cat /proc/modules > modules.txt
   ipcs > ipcs.txt
+  echo "$hostname" > hostname
   )
 
 #-----------
