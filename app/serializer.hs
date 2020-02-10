@@ -190,8 +190,10 @@ main = do
       liftIO (BS.writeFile out (S.encode cnt))
     "serialized/BulletinSearch.serialized" %> \out -> do
       need ["sources/BulletinSearch.csv"]
+      need ["sources/BulletinSearch2001-2008.csv"]
       l <- liftIO (loadMicrosoftBulletin "sources/BulletinSearch.csv")
-      case l of
+      lOld <- liftIO (loadMicrosoftBulletin "sources/BulletinSearch.csv")
+      case (<>) <$> l <*> lOld of
           -- sérialisé sous forme [(Int, Text, Day)]
           Right kbdates -> let kblist = concatMap (\(KBDate d k1 k2 t) -> map (fmap (,t,d)) [k1,k2]) kbdates
                                lst :: [(Int, T.Text, Day)]
