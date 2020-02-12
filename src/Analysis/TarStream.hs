@@ -16,23 +16,23 @@ import qualified Data.Conduit.List            as CL
 import qualified Data.Conduit.Tar             as CT
 import qualified Data.Conduit.Zlib            as CZ
 import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as TE
 
 import           Control.Dependency
 import           Data.Conduit.Require
 
 nestedTarProducer :: (MonadThrow m, PrimMonad m) => ConduitT BS.ByteString ([T.Text], BS.ByteString) m ()
-nestedTarProducer = CT.untar $ \hdr -> case CT.fileType hdr of
-                                        CT.FTNormal -> extract hdr
-                                        _           -> return ()
+nestedTarProducer = CT.untarChunks .| CT.withEntries inner
     where
+        inner hdr = case CT.headerFileType hdr of
+                      CT.FTNormal -> extract hdr
+                      _           -> return ()
         extract hdr | ".tar.gz" `T.isSuffixOf` path = tgz
                     | ".tgz"    `T.isSuffixOf` path = tgz
                     | ".tar"    `T.isSuffixOf` path = tar
                     | otherwise = CL.consume >>= yield . ([path],) . mconcat
             where
-                bpath = CT.filePath hdr
-                path = either (const (TE.decodeLatin1 bpath)) id (TE.decodeUtf8' bpath)
+                bpath = CT.headerFilePath hdr
+                path = T.pack bpath
                 tgz = CZ.ungzip .| tar
                 tar = nestedTarProducer .| CL.map (_1 %~ (path:))
 
