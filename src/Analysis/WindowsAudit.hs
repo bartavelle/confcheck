@@ -208,8 +208,16 @@ parseLine "IPCONFIG" (mac : ip : mask : _) = either miscErr (cinfo . CIf) (mkNet
 parseLine "IPCONFIG" l = mkerr "Bad IPCONFIG" l
 parseLine "SECU" [a,b] = checkSecu a (T.strip b)
 parseLine "SECU" l = mkerr "Bad SECU" l
-parseLine "SRV" [sname, _, _, identity, path] | "C:\\Windows\\" `T.isPrefixOf` path = Nothing
-                                              | otherwise = miscInfo ("Unknown service " <> sname <> ", running as " <> identity <> ", and located at " <> path)
+parseLine "SRV" [sname, srunning, sautorun, identity, path] = either miscInfo id $ do
+  isRunning <- case srunning of
+                 "Running" -> pure True
+                 "Stopped" -> pure False
+                 _ -> Left ("Invalid running status " <> srunning)
+  isAutorun <- case sautorun of
+                 "Auto" -> pure True
+                 "Manual" -> pure False
+                 _ -> Left ("Invalid autorun status " <> sautorun)
+  pure $ cinfo $ WinService (WindowsService sname isRunning isAutorun identity path)
 parseLine cat y = mkerr cat y
 
 checkSecu :: Text -> Text -> Maybe Vulnerability
