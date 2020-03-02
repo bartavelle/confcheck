@@ -163,6 +163,8 @@ ovalOnce serdir = do
   let ld f = mkOnce . loadOvalSerialized $ serdir ++ "/" ++ f
   rhoval     <- ld "com.redhat.rhsa-all.xml"
   s11oval    <- ld "suse.linux.enterprise.server.11.xml"
+  s12oval    <- ld "suse.linux.enterprise.server.12.xml"
+  s15oval    <- ld "suse.linux.enterprise.server.15.xml"
   os122oval  <- ld "opensuse.12.2.xml"
   os123oval  <- ld "opensuse.12.3.xml"
   os132oval  <- ld "opensuse.13.2.xml"
@@ -177,6 +179,8 @@ ovalOnce serdir = do
   deb10      <- ld "oval-definitions-buster.xml"
   let ov v = case v of
                  UnixVersion SuSE (11:_) -> Just s11oval
+                 UnixVersion SuSE (12:_) -> Just s12oval
+                 UnixVersion SuSE (15:_) -> Just s15oval
                  UnixVersion RedHatLinux _ -> Just rhoval
                  UnixVersion RHEL _ -> Just rhoval
                  UnixVersion CentOS _ -> Just rhoval

@@ -442,6 +442,8 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
           MVersionIs testid version ->
             pure $ Just (testid, OFullTest "distribution" (OvalStateOp (Version (reVersion version)) PatternMatch))
           UnknownT -> pure Nothing
+          Unhandled _ _ _ td
+            | Just mname <- T.stripPrefix "Module " (_tdCE td) >>= T.stripSuffix " is enabled" -> Nothing <$ traceM ("Unhandled RedHat module check for " ++ show mname)
           Unhandled{} -> Left ("Unknown test " ++ show t)
          where
             reVersion v = "^" <> T.pack (show v) <> "(\\.[.0-9]+)?$"

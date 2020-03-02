@@ -105,6 +105,8 @@ data DlSource
 ovalSources :: [DlSource]
 ovalSources =
     [ DL "http://support.novell.com/security/oval"            NoCompression "suse.linux.enterprise.server.11.xml" True
+    , DL "http://support.novell.com/security/oval"            NoCompression "suse.linux.enterprise.server.12.xml" True
+    , DL "http://support.novell.com/security/oval"            NoCompression "suse.linux.enterprise.server.15.xml" True
     , DL "http://www.redhat.com/security/data/oval"           BZip2         "com.redhat.rhsa-all.xml"             False
     , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.12.2.xml"                   True
     , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.12.3.xml"                   True
@@ -117,8 +119,8 @@ ovalSources =
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.trusty.cve.oval.xml"      False
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.xenial.cve.oval.xml"      False
     , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.bionic.cve.oval.xml"      False
-    , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.0.xml"                   True
-    , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.1.xml"                   True
+    , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.0.xml"              True
+    , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.1.xml"              True
     ]
 
 downloadSource :: DlSource -> Action ()
