@@ -163,6 +163,7 @@ parseWindowsVersion p =
         "Microsoft Windows 7 Professionnel" -> Just (UnixVersion (WindowsClient "7 pro") [])
         "Microsoft Windows XP Service Pack 2" -> Just (UnixVersion (WindowsClient "XP") [2])
         "Microsoft® Windows Vista\153 Professionnel" -> Just (UnixVersion (WindowsClient "Vista pro") [])
+        "Microsoft Windows 10 Enterprise" -> Just (UnixVersion (WindowsClient "10 Enterprise") [])
         _ -> Nothing
 
 mkNetif :: Text -> Text -> Text -> Either Text NetIf
