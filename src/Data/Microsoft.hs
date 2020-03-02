@@ -93,7 +93,11 @@ analyzeMissingKBsContent ody fp filecontent = do
             let miss = MP ("KB" <> tkb) day (Just (bulletinid <> " " <> title))
             return $ Vulnerability crit $ MissingPatch miss
         mresult = mapM toVulnerability . filter (T.isInfixOf "(KB") . T.lines
-    return (either (mkerr fp) Seq.fromList (mresult (T.decodeLatin1 filecontent)))
+    let decodefunction = if "\255\254" `BS.isPrefixOf` filecontent
+                           then T.decodeUtf16LE
+                           else T.decodeLatin1
+        textcontent = decodefunction filecontent
+    return (either (mkerr fp) Seq.fromList (mresult textcontent))
 
 missing :: MBSA -> Bool
 missing = not . _mbsaInstalled
