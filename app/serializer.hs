@@ -116,9 +116,9 @@ ovalSources =
     , DL "https://www.debian.org/security/oval"               NoCompression "oval-definitions-jessie.xml"         False
     , DL "https://www.debian.org/security/oval"               NoCompression "oval-definitions-stretch.xml"        False
     , DL "https://www.debian.org/security/oval"               NoCompression "oval-definitions-wheezy.xml"         False
-    , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.trusty.cve.oval.xml"      False
-    , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.xenial.cve.oval.xml"      False
-    , DL "https://people.canonical.com/~ubuntu-security/oval" NoCompression "com.ubuntu.bionic.cve.oval.xml"      False
+    , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.trusty.cve.oval.xml"      False
+    , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.xenial.cve.oval.xml"      False
+    , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.bionic.cve.oval.xml"      False
     , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.0.xml"              True
     , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.1.xml"              True
     ]
