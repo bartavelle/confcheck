@@ -22,6 +22,16 @@ From the `confcheck` directory,
 dist/confcheck-serializer
 ```
 
+### Updating the sources
+
+Delete files you want to update from the sources directory, then run the serializer again:
+
+```
+# updating Ubuntu sources
+rm sources/com.ubuntu.*
+dist/confcheck-serializer
+```
+
 ## Using the program
 
 From the `confcheck` directory,

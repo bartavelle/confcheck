@@ -119,6 +119,8 @@ ovalSources =
     , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.trusty.cve.oval.xml"      False
     , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.xenial.cve.oval.xml"      False
     , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.bionic.cve.oval.xml"      False
+    , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.eoan.cve.oval.xml"        False
+    , DL "https://people.canonical.com/~ubuntu-security/oval" BZip2         "com.ubuntu.focal.cve.oval.xml"       False
     , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.0.xml"              True
     , DL "http://support.novell.com/security/oval"            NoCompression "opensuse.leap.15.1.xml"              True
     ]

@@ -173,6 +173,8 @@ ovalOnce serdir = do
   ubuntu1404 <- ld "com.ubuntu.trusty.cve.oval.xml"
   ubuntu1604 <- ld "com.ubuntu.xenial.cve.oval.xml"
   ubuntu1804 <- ld "com.ubuntu.bionic.cve.oval.xml"
+  ubuntu1910 <- ld "com.ubuntu.eoan.cve.oval.xml"
+  ubuntu2004 <- ld "com.ubuntu.focal.cve.oval.xml"
   deb7       <- ld "oval-definitions-wheezy.xml"
   deb8       <- ld "oval-definitions-jessie.xml"
   deb9       <- ld "oval-definitions-stretch.xml"
@@ -190,6 +192,8 @@ ovalOnce serdir = do
                  UnixVersion Ubuntu [14,4] -> Just ubuntu1404
                  UnixVersion Ubuntu [16,4] -> Just ubuntu1604
                  UnixVersion Ubuntu [18,4] -> Just ubuntu1804
+                 UnixVersion Ubuntu [19,10] -> Just ubuntu1910
+                 UnixVersion Ubuntu [20,4] -> Just ubuntu2004
                  UnixVersion Debian [7,_] -> Just deb7
                  UnixVersion Debian [8,_] -> Just deb8
                  UnixVersion Debian [9,_] -> Just deb9

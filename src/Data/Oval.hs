@@ -310,6 +310,8 @@ automaticResults = HM.fromList
   [ ("Is the host running Ubuntu trusty?", (`IVersionIs` [14, 4]))
   , ("Is the host running Ubuntu xenial?", (`IVersionIs` [16, 4]))
   , ("Is the host running Ubuntu bionic?", (`IVersionIs` [18, 4]))
+  , ("Is the host running Ubuntu eoan?",   (`IVersionIs` [19, 10]))
+  , ("Is the host running Ubuntu focal?",  (`IVersionIs` [20, 4]))
   , ("Debian GNU/Linux 10 is installed", (`MVersionIs` 10))
   , ("Debian GNU/Linux 9 is installed", (`MVersionIs` 9))
   , ("Debian GNU/Linux 8 is installed", (`MVersionIs` 8))

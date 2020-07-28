@@ -81,6 +81,10 @@ fi
   initctl list > initctl-list.txt
   getent passwd > passwd
   getent group > group
+  for usr_lib_file in fedora_release redhat_release issue.net
+  do
+    [ -f "/usr/lib/$usr_lib_file" ] && cp "/usr/lib/$usr_lib_file" .
+  done
   if [ "x$OPT_AUDIT" == "xtrue" ]; then
     tar --atime-preserve -czf etc.tar.gz /etc
     getent shadow > shadow
