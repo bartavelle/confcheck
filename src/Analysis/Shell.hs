@@ -39,5 +39,4 @@ toCommands fn cnt = case prRoot <$> parseScript fileLoader (newParseSpec { psFil
         Identity (Just t)  -> Right $ concatMap extractParams (extractCommands t)
         _ -> Left "failed"
    where
-     fileLoader = SystemInterface (\_ -> Identity (Left "can't load"))
-
+     fileLoader = mockedSystemInterface []

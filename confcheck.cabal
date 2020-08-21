@@ -80,7 +80,7 @@ library
                      , vector
                      , foldl
                      , compactmap
-                     , ShellCheck
+                     , ShellCheck == 0.7.*
                      , split
                      , network-ip
                      , data-textual
