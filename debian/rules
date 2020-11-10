@@ -1,0 +1,27 @@
+#!/usr/bin/make -f
+
+DISTRIBUTION = $(shell lsb_release -sr)
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+override_dh_auto_test:
+override_dh_auto_build:
+override_dh_auto_install:
+	mkdir -p debian/confcheck-cli/usr/bin
+	mkdir -p debian/confcheck-cli/etc
+	mkdir -p debian/confcheck-cli/usr/share/confcheck-cli/source
+	mkdir -p debian/confcheck-cli/usr/share/doc/confcheck-cli
+	mkdir -p dist
+	stack install --local-bin-path dist --ghc-options "-j4 +RTS -A128m -n2m -qg -RTS" confcheck
+	# sources serialization
+	# cd ../confcheck ; ../.stack-work/install/x86_64-linux/$(RESOLVER)/7.10.3/bin/confcheck-serializer
+	cp README.md debian/confcheck-cli/usr/share/doc/confcheck-cli/
+	cp sources/BulletinSearch.csv sources/patchdiag.xref debian/confcheck-cli/usr/share/confcheck-cli/source/
+	cp -r serialized debian/confcheck-cli/usr/share/confcheck-cli/
+	cp dist/confcheck-serializer debian/confcheck-cli/usr/bin/
+	cp dist/confcheck-exe debian/confcheck-cli/usr/bin/confcheck
+	find debian/confcheck-cli -name '.*.swp' -print0 | xargs -0 rm -f
+	chown -R root.root debian/confcheck-cli
+

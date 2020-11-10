@@ -1,0 +1,10 @@
+Source: confcheck
+Maintainer: Simon Marechal <simon.marechal@synacktiv.com>
+Priority: important
+
+Package: confcheck-cli
+Architecture: amd64
+Description: Configuration files analysis tool.
+Section: introspection
+Priority: important
+Depends: libpq5, libgpgme11
