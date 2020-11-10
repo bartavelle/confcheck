@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Analysis.RPM (listRPMs, postRPMAnalysis, runAnalyze) where
+module Analysis.RPM (listRPMs, postRPMAnalysis, runAnalyze, rpmInfos, mkrpmmap) where
 
 
 import           Analysis.Common

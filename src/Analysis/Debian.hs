@@ -3,31 +3,32 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TupleSections     #-}
-module Analysis.Debian (listDebs, postDebAnalysis, loadSerializedCVE) where
+module Analysis.Debian (listDebs, postDebAnalysis, loadSerializedCVE, parseDpkgStatus, mkdebmap, runOvalAnalyze) where
 
-import           Analysis.Common
-import           Analysis.Oval                (ovalRuleMatchedDEB, postOvalAnalysis)
-import           Analysis.Types.ConfigInfo
-import           Analysis.Types.Package
-import           Analysis.Types.Unix
-import           Analysis.Types.Vulnerability
-import           Data.Oval
+import           Analysis.Common              ( Analyzer, Once, requireTxt )
+import           Analysis.Oval                ( ovalRuleMatchedDEB, postOvalAnalysis )
+import           Analysis.Types.ConfigInfo    ( ConfigInfo (SoftwarePackage), _SoftwarePackage )
+import           Analysis.Types.Package       ( PType (PDeb), SoftwarePackage (Package) )
+import           Analysis.Types.Unix          ( UnixVersion )
+import           Analysis.Types.Vulnerability ( OutdatedPackage (OP), Severity, VulnType (OutdatedPackage),
+                                                Vulnerability (Vulnerability) )
+import           Data.Oval                    ( OFullTest, OTestId, OvalDefinition (OvalDefinition) )
 
 import           Control.Lens
-import           Control.Monad
+import           Control.Monad                ( guard )
 import qualified Data.ByteString              as BS
-import           Data.Char
-import           Data.DebianVersion
+import           Data.Char                    ( isAlphaNum )
+import           Data.DebianVersion           ( DebianVersion, parseDebianVersion, prettyDebianVersion )
 import qualified Data.HashMap.Strict          as HM
-import           Data.List.Split              (splitWhen)
+import           Data.List.Split              ( splitWhen )
 import qualified Data.Map.Strict              as M
-import           Data.Maybe                   (mapMaybe)
-import           Data.Sequence                (Seq)
+import           Data.Maybe                   ( mapMaybe )
+import           Data.Sequence                ( Seq )
 import qualified Data.Sequence                as Seq
 import qualified Data.Serialize               as S
-import           Data.Text                    (Text)
+import           Data.Text                    ( Text )
 import qualified Data.Text                    as T
-import           Data.Time.Calendar
+import           Data.Time.Calendar           ( Day )
 
 loadSerializedCVE :: FilePath -> IO (M.Map T.Text (Day, Severity))
 loadSerializedCVE cveserial = do
@@ -80,6 +81,7 @@ parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMult
             pure $ Package nm ver (PDeb src srcver)
         regroupMultilines (a : b : xs) | T.null b = a : b : regroupMultilines xs
                                        | T.head b == ' ' = regroupMultilines (a <> b : xs)
+        regroupMultilines (x : xs) = x : regroupMultilines xs
         regroupMultilines x = x
         mkmaps :: [Text] -> HM.HashMap Text Text
         mkmaps = HM.fromList . map ((_2 %~ T.drop 2) . T.breakOn ": ")
