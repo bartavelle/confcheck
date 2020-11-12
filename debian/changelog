@@ -1,5 +1,5 @@
-confcheck (0.0) UNRELEASED; urgency=medium
+confcheck (0.0) unstable; urgency=medium
 
   * Initial release.
 
- -- Simon Marechal <simon.marechal@synacktiv.com>  Tue, 10 Nov 2020 17:59:19 +0100
+ -- Simon Marechal <simon.marechal@synacktiv.com>  Thu, 12 Nov 2020 09:18:24 +0100

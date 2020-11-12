@@ -1,0 +1,5 @@
+.debhelpers
+confcheck-cli.debhelper.log
+confcheck-cli.substvars
+confcheck-cli
+files

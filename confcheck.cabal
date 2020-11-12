@@ -184,6 +184,7 @@ executable confcheck-patches
   build-depends:       base
                      , confcheck
                      , confcheck-types
+                     , aeson
                      , optparse-applicative
                      , bytestring
                      , containers
