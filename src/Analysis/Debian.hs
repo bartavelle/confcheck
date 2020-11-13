@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TupleSections     #-}
-module Analysis.Debian (listDebs, postDebAnalysis, loadSerializedCVE, parseDpkgStatus, mkdebmap, runOvalAnalyze) where
+module Analysis.Debian (listDebs, postDebAnalysis, loadSerializedCVE, parseDpkgStatus, parseDpkgL, mkdebmap, runOvalAnalyze) where
 
 import           Analysis.Common              ( Analyzer, Once, requireTxt )
 import           Analysis.Oval                ( ovalRuleMatchedDEB, postOvalAnalysis )
@@ -66,6 +66,7 @@ postDebAnalysis :: (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTe
                 -> IO (Seq Vulnerability)
 postDebAnalysis = postOvalAnalysis mkdebmap runOvalAnalyze
 
+-- | parses the content of dpkg-status
 parseDpkgStatus :: Text -> [SoftwarePackage]
 parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMultilines . T.lines
     where
@@ -85,6 +86,13 @@ parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMult
         regroupMultilines x = x
         mkmaps :: [Text] -> HM.HashMap Text Text
         mkmaps = HM.fromList . map ((_2 %~ T.drop 2) . T.breakOn ": ")
+
+-- | parses the output of dpkg -l, this does not work well!
+parseDpkgL :: Text -> [SoftwarePackage]
+parseDpkgL = mapMaybe (mkpackage . T.words) . T.lines
+  where
+      mkpackage ("ii" : nm : ver : _) = Just (Package nm ver (PDeb nm (Just ver)))
+      mkpackage _ = Nothing
 
 listDebs :: Analyzer (Seq ConfigInfo)
 listDebs = Seq.fromList . fmap SoftwarePackage . parseDpkgStatus <$> requireTxt ["logiciels/dpkg-status"]
