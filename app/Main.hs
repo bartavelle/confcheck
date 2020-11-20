@@ -1,21 +1,19 @@
 {-# LANGUAGE LambdaCase #-}
 module Main where
 
-import           Analysis
-import           Analysis.Common
-import           Analysis.Oval
-import           Analysis.Solaris
-import           Analysis.Types.Helpers       (AuditFileType (..))
+import           Analysis                     ( analyzeFile )
+import           Analysis.Common              ( mkOnce )
+import           Analysis.Oval                ( ovalOnce )
+import           Analysis.Solaris             ( loadPatchDiag )
+import           Analysis.Types.Helpers       ( AuditFileType (..) )
 import           Analysis.Types.Vulnerability
-import           Data.Microsoft
-import           Reports                      (DisplayMode (..),
-                                               ReportSection (..),
-                                               defaultSections, showReport)
+import           Data.Microsoft               ( loadKBDays )
+import           Reports                      ( DisplayMode (..), ReportSection (..), defaultSections, showReport )
 
 import           Control.Lens
 import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8   as BSL
-import           Data.Csv                     (encode)
+import           Data.Csv                     ( encode )
 import qualified Data.Foldable                as F
 import           Data.List
 import qualified Data.Set                     as S
@@ -31,6 +29,7 @@ data RunMode
     = Standard
     | CSV
     | Patches
+    | ShowD
     deriving (Show, Eq, Ord, Enum, Bounded)
 
 data Switch x
@@ -42,7 +41,7 @@ sections :: Parser [ReportSection]
 sections = S.toList . foldl' applySwitch defaultSections <$> many sectionflag
   where
     sectionflag = F.asum (map mkSecOption [minBound .. maxBound])
-    mkSecOption sec
+    mkSecOption sec 
       = let secname = drop 7 (show sec)
             (optname, switcher, desc) =
               if S.member sec defaultSections
@@ -59,10 +58,11 @@ options = Options <$> sections <*> displaymode <*> runmode <*> some file
   where
     displaymode = pure Ansi
     parseMode = maybeReader $ \case
-        "csv"      -> Just CSV
-        "patches"  -> Just Patches
+        "csv" -> Just CSV
+        "patches" -> Just Patches
         "standard" -> Just Standard
-        _          -> Nothing
+        "raw" -> Just ShowD
+        _ -> Nothing
     runmode = option parseMode
       (  long "mode"
       <> short 'm'
@@ -89,17 +89,20 @@ main = do
       Patches -> do
         res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) files
         let missings = res ^.. traverse . _Vulnerability . aside _OutdatedPackage
-            toPatchRecord (sev, OP titre installed patched pub _)
+            toPatchRecord (sev, OP titre installed patched pub _) 
               = [show pub, show sev, T.unpack titre, T.unpack installed, T.unpack patched]
 
         BSL.putStrLn (encode (map toPatchRecord (F.toList missings)))
       Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> showReport dmode secs) files
+      ShowD -> forM_ files $ \p -> do
+        putStrLn ("Parsing " ++ p)
+        analyzeFile AuditTarGz xdiag ov okbd p >>= mapM_ print
 
 toRecord :: Vulnerability -> [String]
-toRecord v
+toRecord v 
   = case v of
-      Vulnerability sev (OutdatedPackage (OP titre installed patched pub mtest))
+      Vulnerability sev (OutdatedPackage (OP titre installed patched pub mtest)) 
         -> ["Patch", show sev, T.unpack titre, T.unpack installed, T.unpack patched, show pub, maybe mempty T.unpack mtest]
       Vulnerability sev det -> ["Vulnerabilité", show sev, show det]
       ConfigInformation det -> ["Information", "", show det]
-      SomethingToCheck      -> ["??"]
+      SomethingToCheck -> ["??"]

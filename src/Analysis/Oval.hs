@@ -194,10 +194,10 @@ ovalOnce serdir = do
                  UnixVersion Ubuntu [18,4] -> Just ubuntu1804
                  UnixVersion Ubuntu [19,10] -> Just ubuntu1910
                  UnixVersion Ubuntu [20,4] -> Just ubuntu2004
-                 UnixVersion Debian [7,_] -> Just deb7
-                 UnixVersion Debian [8,_] -> Just deb8
-                 UnixVersion Debian [9,_] -> Just deb9
-                 UnixVersion Debian [10,_] -> Just deb10
+                 UnixVersion Debian (7:_) -> Just deb7
+                 UnixVersion Debian (8:_) -> Just deb8
+                 UnixVersion Debian (9:_) -> Just deb9
+                 UnixVersion Debian (10:_) -> Just deb10
                  UnixVersion OpenSUSELeap [15,0] -> Just osl150oval
                  UnixVersion OpenSUSELeap [15,1] -> Just osl151oval
                  _ -> trace ("Unknown os " ++ show v) Nothing

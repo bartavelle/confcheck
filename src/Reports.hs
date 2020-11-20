@@ -83,7 +83,12 @@ prettyFiche sections finfo = vsep (mapMaybe showSection sections ++ [mempty])
         SectionProblems -> Just (prettyProblems finfo)
         SectionUsers -> Just (prettyUsers (_ficheUsers finfo))
         SectionPackageVulns -> Just (prettyVulns (_fichePkgVulns finfo))
-        _ -> Just ("TODO: " <+> viaShow sec)
+        SectionPackagelist -> undefined
+        SectionFS -> Just (viaShow (_ficheFSProblems finfo))
+        SectionDirectory -> fmap (\d -> "Directory: " <> text d) (_ficheAnnuaire finfo)
+        SectionNetwork -> Just ("network: " <> viaShow (_ficheIfaces finfo))
+        SectionApps -> Just ("apps: " <> viaShow (_ficheApplications finfo))
+        SectionMisc -> Just (viaShow (_ficheProblems finfo))
 
 
 prettyVulns :: JMap RPMVersion PackageUniqInfo -> Doc AnsiStyle
