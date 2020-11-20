@@ -1,3 +1,9 @@
+confcheck (0.1) unstable; urgency=medium
+
+  * First package.
+
+ -- Simon Marechal <simon.marechal@synacktiv.com>  Fri, 20 Nov 2020 15:06:36 +0100
+
 confcheck (0.0) unstable; urgency=medium
 
   * Initial release.

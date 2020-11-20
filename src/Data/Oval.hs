@@ -338,10 +338,12 @@ unhandledTest = anyElement $ \ename mp -> do
                                <*> pure mcomment
   pure $ case HM.lookup (_tdComment details) automaticResults of
            Just r -> r rid
-           Nothing ->
-             if "kernel earlier than " `T.isPrefixOf` _tdComment details
-               then TestAlways rid False (_tdComment details) -- TODO true or false??
-               else Unhandled rid objid sttid details
+           Nothing
+              | "kernel earlier than " `T.isPrefixOf` _tdComment details ->
+                  TestAlways rid False (_tdComment details) -- TODO true or false??
+              | "kernel-rt earlier than " `T.isPrefixOf` _tdComment details ->
+                  TestAlways rid False (_tdComment details) -- TODO :/
+              | otherwise -> Unhandled rid objid sttid details
 
 familyTest :: Parser OvalTest
 familyTest = genTest "family_test" FamilyT
