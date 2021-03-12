@@ -62,15 +62,9 @@ library
                      , lens
                      , aeson
                      , time
-                     , zlib
                      , thyme
-                     , persistent
-                     , comonad
-                     , blaze-markup
-                     , blaze-html
                      , conduit
                      , exceptions
-                     , semigroups
                      , unordered-containers
                      , parallel
                      , strict-base-types
@@ -84,13 +78,8 @@ library
                      , split
                      , network-ip
                      , data-textual
-                     , hexpat
                      , pcre-utils
-                     , stateWriter
-                     , transformers
-                     , yaml
                      , withdependencies >= 0.3.0
-                     , vector-space
                      , ShellCheck
                      , confcheck-types
                      , confcheck-audittool
@@ -99,7 +88,6 @@ library
                      , conduit-extra
                      , resourcet
                      , primitive
-                     , transformers-base
                      , regex-compat
                      , parsers-megaparsec
                      , prettyprinter
@@ -144,7 +132,6 @@ executable confcheck-serializer
     build-depends:     base
                      , confcheck
                      , confcheck-types
-                     , case-insensitive
                      , time
                      , text
                      , containers
@@ -155,7 +142,6 @@ executable confcheck-serializer
                      , unordered-containers
                      , cassava
                      , vector
-                     , deepseq
                      , shake
                      , directory
                      , conduit
