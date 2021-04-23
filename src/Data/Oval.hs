@@ -85,7 +85,7 @@ instance Serialize OFullTest where
 instance Serialize OvalDefinition where
 instance Serialize OvalStateOp where
 
-data OvalTest = RpmInfoT !OTestId !ObjectId !StateId
+data OvalTest = RpmInfoT !OTestId !ObjectId !(Maybe StateId)
               | FamilyT !OTestId !ObjectId !StateId
               | UnameT !OTestId !ObjectId !(Maybe StateId)
               | UnknownT
@@ -287,7 +287,7 @@ test :: Parser OvalTest
 test = lx (rpmtest <|> dpkgInfoTest <|> familyTest <|> unameTest <|> unknownTest <|> unhandledTest)
 
 withid :: (OTestId -> Parser a) -> HM.HashMap T.Text T.Text -> Parser a
-withid a mp = fmap OTestId (extractParameter "id" mp) >>= a
+withid a mp = extractParameter "id" mp >>= a . OTestId
 objectId :: HM.HashMap T.Text T.Text -> Parser ObjectId
 objectId = fmap ObjectId . extractParameter "id"
 objectRef :: Parser ObjectId
@@ -300,7 +300,8 @@ genTest t c = element t $ withid $ \rid ->
   c rid <$> objectRef <*> stateRef
 
 rpmtest :: Parser OvalTest
-rpmtest = genTest "rpminfo_test" RpmInfoT
+rpmtest = element "rpminfo_test" $ withid $ \rid ->
+   RpmInfoT rid <$> objectRef <*> optional stateRef
 
 unknownTest :: Parser OvalTest
 unknownTest = UnknownT <$ ignoreElement "unknown_test"
@@ -316,6 +317,7 @@ automaticResults = HM.fromList
   , ("Debian GNU/Linux 9 is installed", (`MVersionIs` 9))
   , ("Debian GNU/Linux 8 is installed", (`MVersionIs` 8))
   , ("Debian GNU/Linux 7 is installed", (`MVersionIs` 7))
+  , ("Red Hat CoreOS 4 is installed", (`MVersionIs` 4))
   , ("Red Hat Enterprise Linux 3 is installed", (`MVersionIs` 3))
   , ("Red Hat Enterprise Linux 4 is installed", (`MVersionIs` 4))
   , ("Red Hat Enterprise Linux 5 is installed", (`MVersionIs` 5))
@@ -377,7 +379,7 @@ state = lx $ anyElement $ \ename mp -> do
     "rpmverifyfile_state" -> do
       nm <- lx (getTextFrom "name")
       -- TODO, assumes pattern match :/
-      guard (nm == "^redhat-release")
+      guard (nm == "^redhat-release" || nm == "^redhat-release-coreos")
       mversion <- lx (optional (getTextFrom "version"))
       case mversion of
         Just version -> pure (OvalState sid (OvalStateOp (Version version) PatternMatch))
@@ -437,7 +439,10 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
         mkTest :: OvalTest -> Either String (Maybe (OTestId, OFullTest))
         mkTest t = case t of
           TestAlways testid b w -> pure $ Just (testid, OFullTest "always" (OvalStateOp (TTBool b w) Equal))
-          RpmInfoT testid objectid stateid -> go testid objectid stateid
+          RpmInfoT testid _ Nothing -> do
+            traceM ("fixme, ignoreing testid " ++ show testid)
+            pure Nothing
+          RpmInfoT testid objectid (Just stateid) -> go testid objectid stateid
           FamilyT testid objectid stateid -> go testid objectid stateid
           UnameT testid objectid mstateid -> mgo testid objectid mstateid
           DpkgInfoT testid objectid mstateid -> mgo testid objectid mstateid
@@ -448,6 +453,7 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
           UnknownT -> pure Nothing
           Unhandled _ _ _ td
             | Just mname <- T.stripPrefix "Module " (_tdCE td) >>= T.stripSuffix " is enabled" -> Nothing <$ traceM ("Unhandled RedHat module check for " ++ show mname)
+            | Just mname <- T.stripPrefix "kernel version " (_tdCE td) >>= T.stripSuffix " is set to boot up on next boot" -> Nothing <$ traceM ("Unhandled RedHat next boot check for " ++ show mname)
           Unhandled{} -> Left ("Unknown test " ++ show t)
          where
             reVersion v = "^" <> T.pack (show v) <> "(\\.[.0-9]+)?$"
