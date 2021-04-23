@@ -112,13 +112,14 @@ ovalRuleMatched (UnixVersion _ uver ) arch debs rpms tests = tolst . matchingCon
                                                 Right (Just _) -> Just []
                                                 Right Nothing -> Nothing
                                                 Left rr -> error ("Could not apply this regexp: " <> show v <> ": " <> show rr)
-                          RpmState v | operation == GreaterThanOrEqual -> do
+                          RpmState v -> do
+                            let bopr = case operation of
+                                      GreaterThanOrEqual -> (>=)
+                                      LessThan -> (<)
+                                      Equal -> (==)
+                                      PatternMatch -> error ("runtest: unhandled patternmatch in RpmState operation " <> show (object, testtype, operation) )
                             rv <- M.lookup object rpms
-                            guard (rv >= v)
-                            return [(object, Right v)]
-                          RpmState v | operation == LessThan -> do
-                            rv <- M.lookup object rpms
-                            guard (rv < v)
+                            guard (bopr rv v)
                             return [(object, Right v)]
                           Exists | operation == Equal -> ([] <$ M.lookup object rpms) <|> ([] <$ M.lookup object debs)
                           DpkgState msourcename rawversion | operation == LessThan -> do
