@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import System.Environment
+import Analysis.Types (RPMVersion (..))
+import Data.Condition
 import qualified Data.HashMap.Strict as HM
+import Data.Oval
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-
-import Data.Oval
-import Data.Condition
-import Analysis.Types (RPMVersion(..))
+import System.Environment
 
 main :: IO ()
 main = getArgs >>= mapM_ showOvalFile

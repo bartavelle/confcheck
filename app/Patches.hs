@@ -1,80 +1,79 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import           Analysis                   ( PackageUniqInfo, ficheData )
-import           Analysis.Common            ( Once, getOnce )
-import qualified Analysis.Debian            as DEB
-import           Analysis.Fiche             ( FicheInfo (_fichePkgVulns), JMap, pckPatches, pckSeverity )
-import           Analysis.Oval              ( OvalContent, ovalOnce )
-import qualified Analysis.RPM               as RPM
-import           Analysis.Types
-import           Control.Lens
-import           Control.Monad              ( unless, when )
-import           Data.Aeson                 ( encode )
+import Analysis (PackageUniqInfo, ficheData)
+import Analysis.Common (Once, getOnce)
+import qualified Analysis.Debian as DEB
+import Analysis.Fiche (FicheInfo (_fichePkgVulns), JMap, pckPatches, pckSeverity)
+import Analysis.Oval (OvalContent, ovalOnce)
+import qualified Analysis.RPM as RPM
+import Analysis.Types
+import Control.Lens
+import Control.Monad (unless, when)
+import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL8
-import           Data.Char                  ( toLower )
-import           Data.Foldable              ( Foldable (toList) )
-import qualified Data.Map.Strict            as M
-import           Data.Sequence              ( Seq )
-import qualified Data.Sequence              as Seq
-import qualified Data.Text                  as T
-import qualified Data.Text.IO               as T
-import qualified Data.Text.Read             as T
-import           Options.Applicative
-import           Reports
-import           System.IO                  ( hIsTerminalDevice, stderr, stdout )
-
+import Data.Char (toLower)
+import Data.Foldable (Foldable (toList))
+import qualified Data.Map.Strict as M
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import qualified Data.Text.Read as T
+import Options.Applicative
+import Reports
+import System.IO (hIsTerminalDevice, stderr, stdout)
 
 data Options
   = Options
-  { ovalPath :: FilePath
-  , distribution :: UnixVersion
-  , packagePath :: PackageFile
-  , arch :: T.Text
-  , displayJSON :: Bool
-  , minVuln :: Severity
-  } deriving (Show)
-
+      { ovalPath :: FilePath,
+        distribution :: UnixVersion,
+        packagePath :: PackageFile,
+        arch :: T.Text,
+        displayJSON :: Bool,
+        minVuln :: Severity
+      }
+  deriving (Show)
 
 data PackageFile
   = PackageFile PackageType FilePath
-  deriving Show
-
+  deriving (Show)
 
 data PackageType
-  = TRPM  -- ^ rpm -qa
-  | TDEBS -- ^ dpkg-status
-  | TDEB  -- ^ dpkg -l
+  = -- | rpm -qa
+    TRPM
+  | -- | dpkg-status
+    TDEBS
+  | -- | dpkg -l
+    TDEB
   deriving (Show, Eq, Bounded, Enum)
 
-
 options :: Parser Options
-options 
-  = Options
-      <$> strOption ( long "path" <> metavar "PATH" <> help "Path to the oval serialized files" <> value "/usr/share/confcheck-cli/serialized" <> showDefault)
-      <*> unixVersion
-      <*> packagefile
-      <*> strOption (long "arch" <> metavar "ARCH" <> help "Target architecture" <> value "x86_64" <> showDefault)
-      <*> switch (long "json" <> help "JSON output")
-      <*> minvuln
-
+options =
+  Options
+    <$> strOption (long "path" <> metavar "PATH" <> help "Path to the oval serialized files" <> value "/usr/share/confcheck-cli/serialized" <> showDefault)
+    <*> unixVersion
+    <*> packagefile
+    <*> strOption (long "arch" <> metavar "ARCH" <> help "Target architecture" <> value "x86_64" <> showDefault)
+    <*> switch (long "json" <> help "JSON output")
+    <*> minvuln
 
 minvuln :: Parser Severity
 minvuln = option (maybeReader sevreader) (long "severity" <> metavar "SEV" <> help "Minimum severity to display ('low', 'med', 'high')" <> value Low)
   where
-    sevreader s 
-      = case take 3 (map toLower s) of
-          "low" -> pure Low
-          "med" -> pure Medium
-          "hig" -> pure High
-          _ -> Nothing
-
+    sevreader s =
+      case take 3 (map toLower s) of
+        "low" -> pure Low
+        "med" -> pure Medium
+        "hig" -> pure High
+        _ -> Nothing
 
 packagefile :: Parser PackageFile
-packagefile = (PackageFile TRPM <$> strOption ( long "rpm" <> metavar "PATH" <> help "Path to the output of rpm -qa" ))
-          <|> (PackageFile TDEBS <$> strOption ( long "dpkgstatus" <> metavar "PATH" <> help "Path to the copy of /var/lib/dpkg/status" ))
-          <|> (PackageFile TDEB <$> strOption ( long "dpkg" <> metavar "PATH" <> help "Path to the output of dpkg -l *WARNING* this will produce an incomplete output!!!" ))
-
+packagefile =
+  (PackageFile TRPM <$> strOption (long "rpm" <> metavar "PATH" <> help "Path to the output of rpm -qa"))
+    <|> (PackageFile TDEBS <$> strOption (long "dpkgstatus" <> metavar "PATH" <> help "Path to the copy of /var/lib/dpkg/status"))
+    <|> (PackageFile TDEB <$> strOption (long "dpkg" <> metavar "PATH" <> help "Path to the output of dpkg -l *WARNING* this will produce an incomplete output!!!"))
 
 unixVersion :: Parser UnixVersion
 unixVersion = sles <|> rh <|> opensuse <|> opensuseleap <|> ubuntu <|> debian
@@ -87,7 +86,6 @@ unixVersion = sles <|> rh <|> opensuse <|> opensuseleap <|> ubuntu <|> debian
     ubuntu = mk Ubuntu "ubuntu" "Ubuntu Linux"
     debian = mk Debian "debian" "Debian Linux"
 
-
 readVersion :: String -> Either String [Int]
 readVersion = mapM parseInt . T.splitOn "." . T.pack
   where
@@ -96,31 +94,30 @@ readVersion = mapM parseInt . T.splitOn "." . T.pack
       unless (T.null rm) (Left ("Extra characters after " ++ show rm))
       pure num
 
-
 pinfo :: ParserInfo Options
 pinfo = info (options <**> helper) (fullDesc <> progDesc "Get missing patches from packages lists")
 
-
-analyze
-  :: (Foldable f, Monoid (f SoftwarePackage))
-  => (Seq ConfigInfo -> M.Map T.Text version)
-  -> (T.Text -> f SoftwarePackage)
-  -> ( UnixVersion
-    -> T.Text -- architecture
-    -> M.Map T.Text version
-    -> OvalContent
-    -> Seq Vulnerability
-     )
-  -> T.Text -- ^ content
-  -> UnixVersion
-  -> T.Text -- ^ arch
-  -> Once OvalContent
-  -> IO (Seq Vulnerability)
+analyze ::
+  (Foldable f, Monoid (f SoftwarePackage)) =>
+  (Seq ConfigInfo -> M.Map T.Text version) ->
+  (T.Text -> f SoftwarePackage) ->
+  ( UnixVersion ->
+    T.Text -> -- architecture
+    M.Map T.Text version ->
+    OvalContent ->
+    Seq Vulnerability
+  ) ->
+  -- | content
+  T.Text ->
+  UnixVersion ->
+  -- | arch
+  T.Text ->
+  Once OvalContent ->
+  IO (Seq Vulnerability)
 analyze mkmap parseLine analz content version a ocontent = analz version a mp <$> getOnce ocontent
   where
     packages = parseLine content
     mp = mkmap (fmap SoftwarePackage (Seq.fromList (toList packages)))
-
 
 main :: IO ()
 main = do
@@ -134,17 +131,17 @@ main = do
         TDEBS -> analyze DEB.mkdebmap DEB.parseDpkgStatus DEB.runOvalAnalyze
         TDEB -> analyze DEB.mkdebmap DEB.parseDpkgL DEB.runOvalAnalyze
   isTerm <- hIsTerminalDevice stdout
-  let displayMode 
-        = if isTerm
-            then Ansi
-            else Raw
+  let displayMode =
+        if isTerm
+          then Ansi
+          else Raw
   case oonce (distribution opts) of
     Just oo -> do
       vulns <- analyze' cnt (distribution opts) (arch opts) oo
       let finfo = ficheData vulns
           filtered_vulns :: JMap RPMVersion PackageUniqInfo
           filtered_vulns = _fichePkgVulns finfo & _Wrapped %~ M.mapMaybe (filterMap (minVuln opts))
-          filtered_finfo = finfo { _fichePkgVulns = filtered_vulns }
+          filtered_finfo = finfo {_fichePkgVulns = filtered_vulns}
       if displayJSON opts
         then BSL8.putStrLn (encode filtered_vulns)
         else showFiche displayMode [SectionPackageVulns] filtered_finfo
@@ -154,4 +151,3 @@ filterMap :: Severity -> PackageUniqInfo -> Maybe PackageUniqInfo
 filterMap sev puinfo
   | puinfo ^. pckSeverity >= sev = Just (puinfo & pckPatches %~ filter ((>= sev) . view _3))
   | otherwise = Nothing
-
