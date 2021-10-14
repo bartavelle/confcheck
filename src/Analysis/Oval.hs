@@ -187,6 +187,7 @@ ovalOnce serdir = do
   deb8 <- ld "oval-definitions-jessie.xml"
   deb9 <- ld "oval-definitions-stretch.xml"
   deb10 <- ld "oval-definitions-buster.xml"
+  deb11 <- ld "oval-definitions-bullseye.xml"
   let ov v = case v of
         UnixVersion SuSE (11 : _) -> Just s11oval
         UnixVersion SuSE (12 : _) -> Just s12oval
@@ -206,6 +207,7 @@ ovalOnce serdir = do
         UnixVersion Debian (8 : _) -> Just deb8
         UnixVersion Debian (9 : _) -> Just deb9
         UnixVersion Debian (10 : _) -> Just deb10
+        UnixVersion Debian (11 : _) -> Just deb11
         UnixVersion OpenSUSELeap [15, 0] -> Just osl150oval
         UnixVersion OpenSUSELeap [15, 1] -> Just osl151oval
         _ -> trace ("Unknown os " ++ show v) Nothing

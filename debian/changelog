@@ -1,3 +1,9 @@
+confcheck (0.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+
+ -- Bartavelle <simon.marechal@synacktiv.com>  Thu, 14 Oct 2021 18:00:19 +0200
+
 confcheck (0.1) unstable; urgency=medium
 
   * First package.

@@ -124,7 +124,7 @@ main = do
   opts <- execParser pinfo
   oonce <- ovalOnce (ovalPath opts)
   let PackageFile ptype pfilepath = packagePath opts
-  cnt <- T.readFile pfilepath
+  cnt <- if pfilepath == "-" then T.getContents else T.readFile pfilepath
   when (ptype == TDEB) (T.hPutStrLn stderr "Warning, using dpkg -l output will produce an incomplete output, using dpkg-status is recommended.")
   let analyze' = case ptype of
         TRPM -> analyze RPM.mkrpmmap RPM.rpmInfos RPM.runAnalyze

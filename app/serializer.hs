@@ -127,6 +127,7 @@ ovalSources =
     DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-jessie.xml" False,
     DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-stretch.xml" False,
     DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-wheezy.xml" False,
+    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-bullseye.xml" False,
     DL "https://people.canonical.com/~ubuntu-security/oval" BZip2 "com.ubuntu.trusty.cve.oval.xml" False,
     DL "https://people.canonical.com/~ubuntu-security/oval" BZip2 "com.ubuntu.xenial.cve.oval.xml" False,
     DL "https://people.canonical.com/~ubuntu-security/oval" BZip2 "com.ubuntu.bionic.cve.oval.xml" False,
