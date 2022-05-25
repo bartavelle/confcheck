@@ -27,9 +27,9 @@ describe (defs, tests) = T.unlines (map showDef defs)
         OvalStateOp Exists Equal ->
           "package " <> tobj <> " exists"
         OvalStateOp (DpkgState mt v) LessThan ->
-          "package " <> tobj <> " <= " <> v <> foldMap (\x -> " [" <> x <> "]") mt
+          "package " <> tobj <> " < " <> v <> foldMap (\x -> " [" <> x <> "]") mt
         OvalStateOp (RpmState rversion) LessThan ->
-          "package " <> tobj <> " <= " <> T.pack (getRPMString rversion)
+          "package " <> tobj <> " < " <> T.pack (getRPMString rversion)
         OvalStateOp (Arch ptrn) PatternMatch ->
           "arch =~ " <> ptrn
         OvalStateOp (Version n) Equal ->
