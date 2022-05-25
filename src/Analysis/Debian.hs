@@ -34,7 +34,7 @@ import Data.DebianVersion (DebianVersion, parseDebianVersion, prettyDebianVersio
 import qualified Data.HashMap.Strict as HM
 import Data.List.Split (splitWhen)
 import qualified Data.Map.Strict as M
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, fromMaybe)
 import Data.Oval (OFullTest, OTestId, OvalDefinition (OvalDefinition))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -87,7 +87,7 @@ parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMult
     mkPackage m = do
       nm <- m ^? ix "Package"
       ver <- m ^? ix "Version"
-      asrc <- m ^? ix "Source"
+      let asrc = fromMaybe nm (m ^? ix "Source") :: Text
       st <- m ^? ix "Status"
       guard (st == "install ok installed")
       (src, srcver) <- case T.break (\x -> not (isAlphaNum x || x `elem` ("-.+" :: String))) asrc of
