@@ -19,9 +19,10 @@ import qualified Data.ByteString.Char8 as BS8
 import Data.Condition
 import Data.DebianVersion
 import qualified Data.HashMap.Strict as HM
-import Data.List (intercalate)
+import Data.List (intercalate, maximumBy)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Ord (comparing)
 import Data.Oval
 import Data.Sequence (Seq)
 import qualified Data.Serialize as S
@@ -154,11 +155,16 @@ enrichOval cve = map addTime
   where
     findCveInRef d =
       let title = d ^. ovalTitle
-       in case cve ^? ix title of
-            Just (nd, ns) -> d & ovalSeverity .~ ns & ovalRelease .~ nd
-            Nothing -> d & ovalRelease .~ defaultDay title
-    addTime d | d ^. ovalRelease == epoch = findCveInRef d
-    addTime d = d
+          mcves = title : d ^.. ovalReferences . traverse . orRefid
+          cves = filter ("CVE-" `T.isPrefixOf`) mcves
+       in case mapMaybe (\x -> cve ^? ix x) cves of
+            [] -> d & ovalRelease .~ defaultDay title & ovalSeverity .~ Low
+            lst ->
+              let (nd, ns) = maximumBy (comparing snd) lst
+               in d & ovalSeverity .~ ns & ovalRelease .~ nd
+    addTime d
+      | d ^. ovalRelease == epoch = findCveInRef d
+      | otherwise = d
 
 type OvalContent = ([OvalDefinition], HM.HashMap OTestId OFullTest)
 

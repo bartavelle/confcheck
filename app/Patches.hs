@@ -5,7 +5,7 @@ module Main where
 import Analysis (PackageUniqInfo, ficheData)
 import Analysis.Common (Once, getOnce)
 import qualified Analysis.Debian as DEB
-import Analysis.Fiche (FicheInfo (_fichePkgVulns), JMap, pckPatches, pckSeverity)
+import Analysis.Fiche (FicheInfo (_fichePkgVulns), JMap, fichePkgVulns, pckPatches, pckSeverity)
 import Analysis.Oval (OvalContent, ovalOnce)
 import qualified Analysis.RPM as RPM
 import Analysis.Types
@@ -25,15 +25,14 @@ import Options.Applicative
 import Reports
 import System.IO (hIsTerminalDevice, stderr, stdout)
 
-data Options
-  = Options
-      { ovalPath :: FilePath,
-        distribution :: UnixVersion,
-        packagePath :: PackageFile,
-        arch :: T.Text,
-        displayJSON :: Bool,
-        minVuln :: Severity
-      }
+data Options = Options
+  { ovalPath :: FilePath,
+    distribution :: UnixVersion,
+    packagePath :: PackageFile,
+    arch :: T.Text,
+    displayJSON :: Bool,
+    minVuln :: Severity
+  }
   deriving (Show)
 
 data PackageFile
@@ -60,11 +59,11 @@ options =
     <*> minvuln
 
 minvuln :: Parser Severity
-minvuln = option (maybeReader sevreader) (long "severity" <> metavar "SEV" <> help "Minimum severity to display ('none', 'low', 'med', 'high')" <> value None)
+minvuln = option (maybeReader sevreader) (long "severity" <> metavar "SEV" <> help "Minimum severity to display ('low', 'med', 'high')" <> value Low)
   where
     sevreader s =
       case take 3 (map toLower s) of
-        "none" -> pure None
+        "non" -> pure None
         "low" -> pure Low
         "med" -> pure Medium
         "hig" -> pure High
@@ -139,7 +138,10 @@ main = do
   case oonce (distribution opts) of
     Just oo -> do
       vulns <- analyze' cnt (distribution opts) (arch opts) oo
-      let finfo = ficheData vulns
+      let finfo =
+            ficheData vulns
+              & fichePkgVulns . _Wrapped . traverse . pckPatches . traverse . _3 %~ max Low -- update all criticities to at least low
+              & fichePkgVulns . _Wrapped . traverse . pckSeverity %~ max Low
           filtered_vulns :: JMap RPMVersion PackageUniqInfo
           filtered_vulns = _fichePkgVulns finfo & _Wrapped %~ M.mapMaybe (filterMap (minVuln opts))
           filtered_finfo = finfo {_fichePkgVulns = filtered_vulns}

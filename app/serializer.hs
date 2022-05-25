@@ -42,13 +42,12 @@ import Network.HTTP.Types.Status (Status (..))
 import System.Directory (createDirectoryIfMissing)
 import Prelude
 
-data KBDate
-  = KBDate
-      { _kbdPosted :: Day,
-        _kbdBulletinKB :: Maybe Int,
-        _kbdComponentKB :: Maybe Int,
-        _kbdBulletinID :: T.Text
-      }
+data KBDate = KBDate
+  { _kbdPosted :: Day,
+    _kbdBulletinKB :: Maybe Int,
+    _kbdComponentKB :: Maybe Int,
+    _kbdBulletinID :: T.Text
+  }
   deriving (Show)
 
 instance FromNamedRecord KBDate where
@@ -104,13 +103,12 @@ extension c =
     GZip -> ".gz"
     NoCompression -> ""
 
-data DlSource
-  = DL
-      { _urlUrl :: String,
-        _urlCompression :: RCompr,
-        _urlFilename :: FilePath,
-        _dlEnrich :: Bool
-      }
+data DlSource = DL
+  { _urlUrl :: String,
+    _urlCompression :: RCompr,
+    _urlFilename :: FilePath,
+    _dlEnrich :: Bool
+  }
   deriving (Show)
 
 ovalSources :: [DlSource]
@@ -123,11 +121,11 @@ ovalSources =
     DL "http://support.novell.com/security/oval" NoCompression "opensuse.12.3.xml" True,
     DL "http://support.novell.com/security/oval" NoCompression "opensuse.13.2.xml" True,
     DL "http://support.novell.com/security/oval" NoCompression "opensuse.13.1.xml" True,
-    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-buster.xml" False,
-    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-jessie.xml" False,
-    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-stretch.xml" False,
-    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-wheezy.xml" False,
-    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-bullseye.xml" False,
+    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-buster.xml" True,
+    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-jessie.xml" True,
+    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-stretch.xml" True,
+    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-wheezy.xml" True,
+    DL "https://www.debian.org/security/oval" NoCompression "oval-definitions-bullseye.xml" True,
     DL "https://people.canonical.com/~ubuntu-security/oval" BZip2 "com.ubuntu.trusty.cve.oval.xml" False,
     DL "https://people.canonical.com/~ubuntu-security/oval" BZip2 "com.ubuntu.xenial.cve.oval.xml" False,
     DL "https://people.canonical.com/~ubuntu-security/oval" BZip2 "com.ubuntu.bionic.cve.oval.xml" False,
@@ -143,12 +141,14 @@ downloadSource src = do
       fullname = _urlFilename src <> extension compression
       fullurl = _urlUrl src <> "/" <> fullname
       compressedname = "sources/" <> fullname
-  join $ liftIO $ do
-    req <- setRequestIgnoreStatus <$> parseRequest fullurl
-    runResourceT $ httpSink req $ \res ->
-      case getResponseStatus res of
-        Status 200 _ -> pure () <$ CB.sinkFile compressedname
-        s -> pure (fail (show s))
+  join $
+    liftIO $ do
+      req <- setRequestIgnoreStatus <$> parseRequest fullurl
+      runResourceT $
+        httpSink req $ \res ->
+          case getResponseStatus res of
+            Status 200 _ -> pure () <$ CB.sinkFile compressedname
+            s -> pure (fail (show s))
   case compression of
     NoCompression -> pure ()
     GZip -> command_ [] "gunzip" [compressedname]
@@ -169,8 +169,7 @@ loadSources year = do
 
 loadCVEs :: FilePath -> Action (M.Map T.Text (Day, Severity))
 loadCVEs f =
-  (S.decode <$> liftIO (BS.readFile f))
-    >>= either fail pure
+  liftIO (BS.readFile f) >>= either fail pure . S.decode
 
 main :: IO ()
 main = do
@@ -190,12 +189,13 @@ main = do
     loadSources currentYear
     "sources/BulletinSearch.csv" %> \out -> do
       e <- doesFileExist out
-      unless e $ fail $
-        unlines
-          [ "You need to download BulletinSearch.xlsx from Microsoft.",
-            "  * https://www.microsoft.com/en-us/download/details.aspx?id=36982",
-            "Once downloaded, convert it to csv and save it to " <> out
-          ]
+      unless e $
+        fail $
+          unlines
+            [ "You need to download BulletinSearch.xlsx from Microsoft.",
+              "  * https://www.microsoft.com/en-us/download/details.aspx?id=36982",
+              "Once downloaded, convert it to csv and save it to " <> out
+            ]
     "serialized/cve.cereal" %> \out -> do
       let pathes = ["serialized/nvdcve-1.1-" <> show year <> ".json" | year <- [2002 .. currentYear]]
       need pathes
