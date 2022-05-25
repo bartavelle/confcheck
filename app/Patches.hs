@@ -60,10 +60,11 @@ options =
     <*> minvuln
 
 minvuln :: Parser Severity
-minvuln = option (maybeReader sevreader) (long "severity" <> metavar "SEV" <> help "Minimum severity to display ('low', 'med', 'high')" <> value Low)
+minvuln = option (maybeReader sevreader) (long "severity" <> metavar "SEV" <> help "Minimum severity to display ('none', 'low', 'med', 'high')" <> value None)
   where
     sevreader s =
       case take 3 (map toLower s) of
+        "none" -> pure None
         "low" -> pure Low
         "med" -> pure Medium
         "hig" -> pure High
