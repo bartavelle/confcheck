@@ -366,6 +366,7 @@ automaticResults =
       ("Red Hat Enterprise Linux 6 is installed", (`MVersionIs` 6)),
       ("Red Hat Enterprise Linux 7 is installed", (`MVersionIs` 7)),
       ("Red Hat Enterprise Linux 8 is installed", (`MVersionIs` 8)),
+      ("Red Hat Enterprise Linux 9 is installed", (`MVersionIs` 9)),
       ("Red Hat Enterprise Linux must be installed", \rid -> TestAlways rid False "RHL trick")
     ]
 
