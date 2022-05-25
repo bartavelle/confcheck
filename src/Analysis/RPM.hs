@@ -31,7 +31,7 @@ listRPMs = fmap SoftwarePackage . rpmInfos <$> requireTxt ["logiciels/rpm-qa.txt
 rpmInfos :: T.Text -> Seq SoftwarePackage
 rpmInfos = Seq.fromList . map getPackageinfo' . T.lines
   where
-    getPackageinfo' = fromMaybe (error "Invalid package name") . getPackageinfo
+    getPackageinfo' t = fromMaybe (error ("Invalid package name: " ++ show t)) (getPackageinfo t)
 
 runAnalyze ::
   UnixVersion ->
