@@ -1,5 +1,5 @@
 name:                confcheck
-version:             0.1.0.0
+version:             0.3.0
 synopsis:            Configuration checking library
 description:         Please see README.md
 homepage:            http://github.com/bartavelle/confcheck#readme
@@ -42,7 +42,6 @@ library
     Analysis.Sudoers
     Analysis.Sysctl
     Analysis.TarStream
-    Analysis.WindowsAudit
     Data.Common
     Data.DebianVersion
     Data.Microsoft
@@ -75,16 +74,13 @@ library
                      , vector
                      , foldl
                      , compactmap
-                     , ShellCheck == 0.7.*
                      , split
                      , network-ip
                      , data-textual
                      , pcre-utils
                      , withdependencies >= 0.3.0
                      , ShellCheck
-                     , confcheck-types
-                     , confcheck-audittool
-                     , fastparser
+                     , confcheck-types >= 0.2.0
                      , tar-conduit
                      , conduit-extra
                      , resourcet
@@ -92,6 +88,7 @@ library
                      , regex-compat
                      , prettyprinter
                      , prettyprinter-ansi-terminal
+                     , fastparser
   default-language:    Haskell2010
 
 executable confcheck-exe

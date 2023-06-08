@@ -8,3 +8,4 @@ audit_startup.vbs
 stack.yaml
 /dist
 debian/debhelper-build-stamp
+stack.yaml.lock

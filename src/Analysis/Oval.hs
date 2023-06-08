@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TupleSections #-}
@@ -14,20 +15,20 @@ import Analysis.Types.Vulnerability
 import Control.Applicative
 import Control.Lens
 import Control.Monad
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BS8
+import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BS8
 import Data.Condition
 import Data.DebianVersion
-import qualified Data.HashMap.Strict as HM
+import Data.HashMap.Strict qualified as HM
 import Data.List (intercalate, maximumBy)
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Ord (comparing)
 import Data.Oval
 import Data.Sequence (Seq)
-import qualified Data.Serialize as S
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import Data.Serialize qualified as S
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
 import Data.Time.Calendar
 import Debug.Trace (trace)
 import Text.Regex.PCRE.ByteString.Utils
@@ -57,6 +58,16 @@ loadOvalSerialized f = do
 -- ^ Le paramètre des packages debians est un peu particulier, car les
 -- fichiers oval se basent sur le nom du package *source*
 
+newtype SMax a = SMax {getSMax :: Maybe a}
+
+instance Ord a => Semigroup (SMax a) where
+  SMax Nothing <> SMax r = SMax r
+  SMax l <> SMax Nothing = SMax l
+  SMax (Just l) <> SMax (Just r) = SMax (Just (max l r))
+
+instance Ord a => Monoid (SMax a) where
+  mempty = SMax Nothing
+
 ovalRuleMatchedDEB ::
   UnixVersion ->
   T.Text -> -- architecture
@@ -64,7 +75,9 @@ ovalRuleMatchedDEB ::
   HM.HashMap OTestId OFullTest ->
   OvalDefinition ->
   (Bool, [(T.Text, DebianVersion)])
-ovalRuleMatchedDEB uversion arch debs tests = fmap (mapMaybe (strength . fmap (preview _Left))) . ovalRuleMatched uversion arch debs mempty tests
+ovalRuleMatchedDEB uversion arch debs tests = fmap (mapMaybe (strength . fmap (preview _Left))) . ovalRuleMatched uversion recentKernel arch debs mempty tests
+  where
+    recentKernel = getSMax $ foldMap (SMax . Just . snd) $ M.filterWithKey (\k _ -> "linux-image-" `T.isPrefixOf` k) debs
 
 strength :: Functor f => (a, f b) -> f (a, b)
 strength (a, f) = (a,) <$> f
@@ -76,17 +89,18 @@ ovalRuleMatchedRPM ::
   HM.HashMap OTestId OFullTest ->
   OvalDefinition ->
   (Bool, [(T.Text, RPMVersion)])
-ovalRuleMatchedRPM uversion arch rpms tests = fmap (mapMaybe (strength . fmap (preview _Right))) . ovalRuleMatched uversion arch mempty rpms tests
+ovalRuleMatchedRPM uversion arch rpms tests = fmap (mapMaybe (strength . fmap (preview _Right))) . ovalRuleMatched uversion Nothing arch mempty rpms tests
 
 ovalRuleMatched ::
   UnixVersion ->
+  Maybe DebianVersion -> -- kernel version
   T.Text -> -- architecture
   M.Map T.Text (T.Text, DebianVersion) -> -- key = source name, fst = package name
   M.Map T.Text RPMVersion ->
   HM.HashMap OTestId OFullTest ->
   OvalDefinition ->
   (Bool, [(T.Text, Either DebianVersion RPMVersion)])
-ovalRuleMatched (UnixVersion _ uver) arch debs rpms tests = tolst . matchingConditions check' . view ovalCond
+ovalRuleMatched (UnixVersion _ uver) mrecentKernel arch debs rpms tests = tolst . matchingConditions check' . view ovalCond
   where
     tolst Nothing = (False, [])
     tolst (Just lst) = (True, concat lst)
@@ -97,20 +111,24 @@ ovalRuleMatched (UnixVersion _ uver) arch debs rpms tests = tolst . matchingCond
         runOpTest object opr =
           case opr of
             AndStateOp a b -> (<>) <$> runOpTest object a <*> runOpTest object b
+            VarStateOp "KERNEL_VERSION" GreaterThan "debian_evr_string" -> case mrecentKernel of
+              Nothing -> Nothing
+              Just v -> error (show (object, v))
+            VarStateOp value operation tp -> error $ show ("varstateop" :: String, value, operation, tp)
             OvalStateOp testtype operation ->
               case testtype of
                 SignatureKeyId _ -> Just []
                 IVersion v
                   | operation == Equal ->
-                    if uver == v
-                      then Just []
-                      else Nothing
+                      if uver == v
+                        then Just []
+                        else Nothing
                 Version v
                   | operation == Equal ->
-                    let v' = T.intercalate "." (map (T.pack . show) uver)
-                     in if v' == v
-                          then Just []
-                          else Nothing
+                      let v' = T.intercalate "." (map (T.pack . show) uver)
+                       in if v' == v
+                            then Just []
+                            else Nothing
                 Version v | operation == PatternMatch ->
                   case compile' compBlank execBlank (T.encodeUtf8 v) of
                     Left _ -> error ("Could not compile this regexp: " <> show v)
@@ -122,6 +140,7 @@ ovalRuleMatched (UnixVersion _ uver) arch debs rpms tests = tolst . matchingCond
                   let bopr = case operation of
                         GreaterThanOrEqual -> (>=)
                         LessThan -> (<)
+                        GreaterThan -> (>)
                         Equal -> (==)
                         PatternMatch -> error ("runtest: unhandled patternmatch in RpmState operation " <> show (object, testtype, operation))
                   rv <- M.lookup object rpms
@@ -144,9 +163,9 @@ ovalRuleMatched (UnixVersion _ uver) arch debs rpms tests = tolst . matchingCond
                       Left rr -> error ("Could not apply this regexp: " <> show architectures <> ": " <> show rr)
                 Arch architecture
                   | operation == Equal ->
-                    if arch == architecture
-                      then Just []
-                      else Nothing
+                      if arch == architecture
+                        then Just []
+                        else Nothing
                 UnameIs _ | operation == Equal -> pure [] -- TODO, handle this
                 _ -> error ("runtest: " <> show (object, testtype, operation))
 
@@ -187,8 +206,8 @@ ovalOnce serdir = do
   ubuntu1404 <- ld "com.ubuntu.trusty.cve.oval.xml"
   ubuntu1604 <- ld "com.ubuntu.xenial.cve.oval.xml"
   ubuntu1804 <- ld "com.ubuntu.bionic.cve.oval.xml"
-  ubuntu1910 <- ld "com.ubuntu.eoan.cve.oval.xml"
   ubuntu2004 <- ld "com.ubuntu.focal.cve.oval.xml"
+  ubuntu2204 <- ld "com.ubuntu.jammy.cve.oval.xml"
   deb7 <- ld "oval-definitions-wheezy.xml"
   deb8 <- ld "oval-definitions-jessie.xml"
   deb9 <- ld "oval-definitions-stretch.xml"
@@ -207,8 +226,8 @@ ovalOnce serdir = do
         UnixVersion Ubuntu [14, 4] -> Just ubuntu1404
         UnixVersion Ubuntu [16, 4] -> Just ubuntu1604
         UnixVersion Ubuntu [18, 4] -> Just ubuntu1804
-        UnixVersion Ubuntu [19, 10] -> Just ubuntu1910
         UnixVersion Ubuntu [20, 4] -> Just ubuntu2004
+        UnixVersion Ubuntu [22, 4] -> Just ubuntu2204
         UnixVersion Debian (7 : _) -> Just deb7
         UnixVersion Debian (8 : _) -> Just deb8
         UnixVersion Debian (9 : _) -> Just deb9

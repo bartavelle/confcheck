@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 module Reports where
 
 import Analysis (ficheData)
@@ -5,16 +6,16 @@ import Analysis.Fiche
 import Analysis.Types
 import Control.Lens (itoList)
 import Data.List (intercalate)
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
 import Data.Maybe (mapMaybe)
 import Data.Sequence (Seq)
-import qualified Data.Set as S
+import Data.Set qualified as S
 import Data.String (IsString (fromString))
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Prettyprinter
 import Prettyprinter.Render.Terminal
-import qualified Prettyprinter.Render.Text as T
+import Prettyprinter.Render.Text qualified as T
 import Prettyprinter.Util (reflow)
 
 data DisplayMode
@@ -119,8 +120,6 @@ prettyUnixVersion (UnixVersion ut v) = put <+> pv
       OpenSuSE -> "OpenSuSE"
       Ubuntu -> "Ubuntu"
       Unk x -> pretty x
-      WindowsClient x -> "Windows Client " <> pretty x
-      WindowsServer x -> "Windows Server " <> pretty x
       Fedora -> "Fedora"
       OpenSUSELeap -> "openSUSE Leap"
     pv = fromString (intercalate "." (map show v))
@@ -148,8 +147,6 @@ prettyProblems finfo = vsep ("# PROBLEMS" : mpatches)
 prettyUsers ::
   ( [UnixUser],
     [UnixUser],
-    [WinUser],
-    [WinUser],
     M.Map Text [AppUser]
   ) ->
   Doc AnsiStyle

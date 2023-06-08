@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
@@ -48,39 +49,31 @@ import Analysis.Types.Package
 import Analysis.Types.Unix
 import Analysis.Types.UnixUsers
 import Analysis.Types.Vulnerability
-import Analysis.Types.Windows
-import Analysis.Windows.SID
-import Analysis.WindowsAudit
 import Control.Applicative
 import Control.Arrow ((&&&))
 import Control.Dependency (guardResult)
 import Control.Lens
-import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Resource (runResourceT)
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Data.Conduit
-import qualified Data.Conduit.List as CL
-import qualified Data.Conduit.Require as R
-import qualified Data.Conduit.Zlib as CZ
-import qualified Data.Foldable as F
-import qualified Data.HashMap.Strict as HM
-import qualified Data.IntMap.Strict as IM
+import Data.Conduit.List qualified as CL
+import Data.Conduit.Require qualified as R
+import Data.Conduit.Zlib qualified as CZ
+import Data.Foldable qualified as F
+import Data.HashMap.Strict qualified as HM
 import Data.List
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
 import Data.Maybe (mapMaybe)
-import Data.Microsoft
-import Data.Ord (comparing)
+import Data.Ord (Down (Down))
 import Data.Oval
-import Data.PrismFilter
 import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
+import Data.Sequence qualified as Seq
 import Data.Sequence.Lens
 import Data.String (fromString)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Textual (toText)
-import Data.Time (Day (..))
 
 data RegroupedVulnerability
   = RV (Seq Vulnerability)
@@ -151,9 +144,6 @@ genvt (ConfigInformation x) = case x of
   ConfShadow _ -> GAuthUnix
   ConfGroup _ -> GAuthUnix
   ConfUnixUser _ -> GAuthUnix
-  ConfWinUser _ -> GAuthWin
-  ConfWinGroup _ -> GAuthWin
-  ConfWinLoginfo _ -> GAuthWin
   CSudo _ -> GAuthUnix
   CRhost _ -> GAuthUnix
   ConfigError _ -> GErrors
@@ -239,64 +229,33 @@ analyzeFile ::
   AuditFileType ->
   Once [PatchInfo] ->
   (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest))) ->
-  Once (IM.IntMap (T.Text, Day)) ->
   FilePath ->
   m (Seq Vulnerability)
-analyzeFile tp xdiag dispatchoval okbd fileLocation =
+analyzeFile tp xdiag dispatchoval fileLocation =
   let posta = postTarAnalysis dispatchoval xdiag
    in liftIO $ case tp of
         AuditTarGz -> runResourceT (analyzeTarGz configExtract fileLocation) >>= posta
         AuditTar -> runResourceT (analyzeTar configExtract fileLocation) >>= posta
-        MBSAReport -> analyzeMBSA okbd fileLocation
-        MissingKBs -> analyzeMissingKBs okbd fileLocation
-        WinVBSReport -> analyzeWindowsAudit fileLocation
-        WinAuditTool -> analyzeAuditTools fileLocation >>= posta
 
 analyzeStream ::
   AuditFileType ->
   Once [PatchInfo] ->
   (UnixVersion -> Maybe (Once ([OvalDefinition], HM.HashMap OTestId OFullTest))) ->
-  Once (IM.IntMap (T.Text, Day)) ->
-  FilePath ->
   BSL.ByteString ->
   IO (Seq Vulnerability)
-analyzeStream tp xdiag dispatchoval okbd fileLocation content =
+analyzeStream tp xdiag dispatchoval content =
   let posta = postTarAnalysis dispatchoval xdiag
    in case tp of
         AuditTar -> runConduit (CL.sourceList (BSL.toChunks content) .| tarAnalyzer configExtract .| CL.foldMap id) >>= posta
         AuditTarGz -> runConduit (CL.sourceList (BSL.toChunks content) .| CZ.ungzip .| tarAnalyzer configExtract .| CL.foldMap id) >>= posta
-        WinVBSReport -> return (Seq.fromList (parseWindowsAudit (BSL.toStrict content)))
-        WinAuditTool -> posta (Seq.fromList (parseAuditTool content))
-        MBSAReport -> analyzeMBSAContent okbd fileLocation (BSL.toStrict content)
-        MissingKBs -> analyzeMissingKBsContent okbd fileLocation (BSL.toStrict content)
 
-cficheUsers :: Seq Vulnerability -> ([UnixUser], [UnixUser], [WinUser], [WinUser], M.Map Text [AppUser])
-cficheUsers res =
-  ( uprivusers,
-    uotherusers,
-    wprivusers,
-    wotherusers,
-    mempty
-  )
+cficheUsers :: Seq Vulnerability -> ([UnixUser], [UnixUser], M.Map Text [AppUser])
+cficheUsers res = (uprivusers, uotherusers, mempty)
   where
     cinfos = res ^.. folded . _ConfigInformation
-    wingroups :: [WinGroup]
-    (unixusers, winusers, wingroups) =
-      runfold
-        ( (,,) <$> prismFold _ConfUnixUser
-            <*> prismFold _ConfWinUser
-            <*> prismFold _ConfWinGroup
-        )
-        cinfos
+    unixusers = cinfos ^.. folded . _ConfUnixUser
     isPriv u = u ^. uupwd . pwdUid == 0 || not (M.null (u ^. uusudo))
-    groupsOfSid :: SID -> [WinGroup]
-    groupsOfSid sid = do
-      g <- wingroups
-      guard (sid `elem` map snd (_wingroupmembers g))
-      g : groupsOfSid (_wingroupsid g)
-    isWPriv u = any isAdminSID (_winsid u : map _wingroupsid (groupsOfSid (_winsid u)))
     (uprivusers, uotherusers) = partition isPriv unixusers
-    (wprivusers, wotherusers) = partition isWPriv winusers
 
 cficheIfaces :: M.Map VulnGroup RegroupedVulnerability -> [(Text, Text, Maybe MAC, Maybe Text)]
 cficheIfaces = toListOf (ix GNet . _RNet . _1 . folded . to getvlan)
@@ -318,7 +277,7 @@ ficheData res =
     rrs
     packages
     (cficheUsers res)
-    (sortBy (flip (comparing fst)) (regrouped ^. ix GFS . _RFS))
+    (sortOn (Down . fst) (regrouped ^. ix GFS . _RFS))
     Nothing
     (JMap packageVulnMap)
     (cficheIfaces regrouped)
@@ -333,7 +292,6 @@ ficheData res =
         hasn't (_ConfigInformation . _ConfGroup),
         hasn't (_ConfigInformation . _UVersion),
         hasn't (_ConfigInformation . _ConfUnixUser),
-        hasn't (_ConfigInformation . _ConfWinUser),
         hasn't (_ConfigInformation . _ConfUnixFile),
         hasn't (_ConfigInformation . _ConfUnixFileNG),
         hasn't (_ConfigInformation . _BrokenLink),

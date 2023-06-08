@@ -1,8 +1,11 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Strict #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -17,6 +20,7 @@ module Data.Oval
     TestType (..),
     Operation (..),
     OvalStateOp (..),
+    VariableId (..),
     orRefid,
     orRefurl,
     orSource,
@@ -31,24 +35,24 @@ module Data.Oval
   )
 where
 
-import Analysis.Types.Package
-import Analysis.Types.Vulnerability
-import Control.Applicative
-import Control.Lens hiding (element, op)
-import Control.Monad
-import qualified Data.ByteString.Lazy as BSL
-import Data.Condition
-import qualified Data.HashMap.Strict as HM
-import Data.Hashable
+import Analysis.Types.Package (RPMVersion, parseRPMVersion)
+import Analysis.Types.Vulnerability (Severity (High, Low, Medium, None, Unknown))
+import Control.Applicative (Alternative (many, some, (<|>)), optional)
+import Control.Lens (makeLenses)
+import Control.Monad (guard, unless, void, when, (>=>))
+import Data.ByteString.Lazy qualified as BSL
+import Data.Condition (Condition (Always, And, Or, Pure))
+import Data.HashMap.Strict qualified as HM
+import Data.Hashable (Hashable)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Parsers.Xml
 import Data.Serialize (Serialize (..))
-import qualified Data.Text as T
-import Data.Time.Calendar
-import Debug.Trace
-import GHC.Generics hiding (to)
-import qualified Text.Parsec.Pos as P
-import qualified Text.Parsec.Prim as P
+import Data.Text qualified as T
+import Data.Time.Calendar (Day, fromGregorian)
+import Debug.Trace (traceM)
+import GHC.Generics (Generic)
+import Text.Parsec.Pos qualified as P
+import Text.Parsec.Prim qualified as P
 import Text.Read (readMaybe)
 import Prelude
 
@@ -61,12 +65,14 @@ newtype StateId = StateId T.Text
 newtype OTestId = OTestId T.Text
   deriving (Show, Eq, Hashable, Serialize)
 
-data OReference
-  = OReference
-      { _orSource :: T.Text,
-        _orRefid :: T.Text,
-        _orRefurl :: T.Text
-      }
+newtype VariableId = VariableId T.Text
+  deriving (Show, Eq, Hashable, Serialize)
+
+data OReference = OReference
+  { _orSource :: T.Text,
+    _orRefid :: T.Text,
+    _orRefurl :: T.Text
+  }
   deriving (Show, Generic)
 
 data Operator
@@ -74,17 +80,16 @@ data Operator
   | CritOr
   deriving (Show)
 
-data OvalDefinition
-  = OvalDefinition
-      { _ovalId :: T.Text,
-        _ovalTitle :: T.Text,
-        _ovalReferences :: [OReference],
-        _ovalDesc :: T.Text,
-        _ovalCond :: Condition OTestId,
-        _ovalSeverity :: Severity,
-        _ovalLine :: Int,
-        _ovalRelease :: Day
-      }
+data OvalDefinition = OvalDefinition
+  { _ovalId :: T.Text,
+    _ovalTitle :: T.Text,
+    _ovalReferences :: [OReference],
+    _ovalDesc :: T.Text,
+    _ovalCond :: Condition OTestId,
+    _ovalSeverity :: Severity,
+    _ovalLine :: Int,
+    _ovalRelease :: Day
+  }
   deriving (Show, Generic)
 
 instance Serialize OReference
@@ -97,73 +102,81 @@ instance Serialize OFullTest
 
 instance Serialize OvalDefinition
 
-instance Serialize OvalStateOp
+instance Serialize t => Serialize (OvalStateOp t)
 
 data OvalTest
-  = RpmInfoT !OTestId !ObjectId !(Maybe StateId)
-  | FamilyT !OTestId !ObjectId !StateId
-  | UnameT !OTestId !ObjectId !(Maybe StateId)
+  = RpmInfoT OTestId ObjectId (Maybe StateId)
+  | FamilyT OTestId ObjectId StateId
+  | UnameT OTestId ObjectId (Maybe StateId)
   | UnknownT
-  | DpkgInfoT !OTestId !ObjectId !(Maybe StateId)
-  | Unhandled !OTestId !ObjectId !StateId !TestDetails
-  | TestAlways !OTestId !Bool !T.Text -- why always?
-  | VersionIs !OTestId !T.Text
-  | IVersionIs !OTestId ![Int]
-  | MVersionIs !OTestId !Int
+  | DpkgInfoT OTestId ObjectId (Maybe StateId)
+  | Unhandled OTestId ObjectId StateId TestDetails
+  | TestAlways OTestId Bool T.Text -- why always?
+  | VersionIs OTestId T.Text
+  | IVersionIs OTestId [Int]
+  | MVersionIs OTestId Int
+  | VariableTest OTestId ObjectId StateId
   deriving (Show)
 
-data TestDetails
-  = TestDetails
-      { _tdName :: T.Text,
-        _tdCheck :: T.Text,
-        _tdCE :: T.Text,
-        _tdComment :: T.Text
-      }
+data TestDetails = TestDetails
+  { _tdName :: T.Text,
+    _tdCheck :: T.Text,
+    _tdCE :: T.Text,
+    _tdComment :: T.Text
+  }
   deriving (Show)
 
 data OvalObject
-  = RpmO !ObjectId !T.Text
-  | FamilyO !ObjectId
-  | UnameO !ObjectId
-  | DpkgO !ObjectId !T.Text
-  | ReleaseCodenameO !ObjectId
-  | FileContent !ObjectId !T.Text !T.Text !T.Text
+  = RpmO ObjectId T.Text
+  | FamilyO ObjectId
+  | UnameO ObjectId
+  | DpkgO ObjectId T.Text
+  | VariableObject ObjectId VariableId
+  | ReleaseCodenameO ObjectId
+  | FileContent ObjectId T.Text T.Text T.Text
   deriving (Show)
 
 data Operation
   = LessThan
   | Equal
   | PatternMatch
+  | GreaterThan
   | GreaterThanOrEqual
   deriving (Show, Generic, Eq)
 
-data OvalState = OvalState !StateId !OvalStateOp
+data OvalState t = OvalState StateId (OvalStateOp t)
   deriving (Show)
 
-data OvalStateOp
-  = OvalStateOp !TestType !Operation
-  | AndStateOp !OvalStateOp !OvalStateOp
-  deriving (Show, Generic)
+data OvalVariable = OvalVariable VariableId OvalVariableValue
+  deriving (Show)
+
+data OvalVariableValue = Strings [T.Text] | EvrString T.Text | KernelVersion
+  deriving (Show)
+
+data OvalStateOp t
+  = OvalStateOp TestType Operation
+  | AndStateOp (OvalStateOp t) (OvalStateOp t)
+  | VarStateOp t Operation T.Text
+  deriving (Show, Generic, Functor)
 
 data TestType
-  = RpmState !RPMVersion
-  | DpkgState !(Maybe T.Text) !T.Text
-  | Version !T.Text
-  | IVersion ![Int]
-  | SignatureKeyId !T.Text
-  | FamilyIs !T.Text
-  | UnameIs !T.Text
+  = RpmState RPMVersion
+  | DpkgState (Maybe T.Text) T.Text
+  | Version T.Text
+  | IVersion [Int]
+  | SignatureKeyId T.Text
+  | FamilyIs T.Text
+  | UnameIs T.Text
   | Exists
-  | MiscTest !T.Text !T.Text
-  | Arch !T.Text
-  | TTBool !Bool !T.Text -- describe why this is always true
+  | MiscTest T.Text T.Text
+  | Arch T.Text
+  | TTBool Bool T.Text -- describe why this is always true
   deriving (Show, Generic, Eq)
 
-data OFullTest
-  = OFullTest
-      { _ofulltestObject :: !T.Text,
-        _ofulltestOp :: !OvalStateOp
-      }
+data OFullTest = OFullTest
+  { _ofulltestObject :: T.Text,
+    _ofulltestOp :: OvalStateOp T.Text
+  }
   deriving (Show, Generic)
 
 makeLenses ''OReference
@@ -176,10 +189,11 @@ criteria = lx (criterion <|> grp P.<?> "criteria")
     criterion = Pure . OTestId <$> element "criterion" (extractParameter "test_ref") P.<?> "criterion"
     grp = element "criteria" getGroup P.<?> "grp"
     getGroup mp = (readOperator mp <*> some criteria) <|> (lx (some (ignoreElement "extend_definition")) *> criteria)
-    readOperator mp = extractParameter "operator" mp >>= \x -> case x of
-      "OR" -> pure Or
-      "AND" -> pure And
-      _ -> fail ("Unknown operator " <> T.unpack x)
+    readOperator mp =
+      extractParameter "operator" mp >>= \x -> case x of
+        "OR" -> pure Or
+        "AND" -> pure And
+        _ -> fail ("Unknown operator " <> T.unpack x)
 
 translateCriticity :: T.Text -> Either String Severity
 translateCriticity t =
@@ -215,7 +229,8 @@ definition = lx $ element "definition" $ \args ->
                   element
                     "reference"
                     ( \mp ->
-                        OReference <$> extractParameter "source" mp
+                        OReference
+                          <$> extractParameter "source" mp
                           <*> extractParameter "ref_id" mp
                           <*> extractParameter "ref_url" mp
                     )
@@ -259,10 +274,33 @@ definition = lx $ element "definition" $ \args ->
       P.skipMany $ ignoreElement "notes"
       crit <- criteria <|> pure (Always False)
       let (sev, res) = fromMaybe (Unknown, fromGregorian 1970 1 1) msev
-      return $! Just $! OvalDefinition defid title refs desc crit sev (P.sourceLine p) res
+      return $ Just $ OvalDefinition defid title refs desc crit sev (P.sourceLine p) res
+
+variable :: Parser OvalVariable
+variable = constantVariable <|> localVariable
+
+constantVariable :: Parser OvalVariable
+constantVariable = lx $ element "constant_variable" $ \mp -> do
+  oid <- variableId mp
+  tp <- extractParameter "datatype" mp
+  let getvalue = lx (element_ "value" (mconcat <$> many characterdata))
+  vvalue <- case tp of
+    "string" -> Strings <$> some getvalue
+    "debian_evr_string" -> EvrString <$> getvalue
+    _ -> fail ("Unrecognized variable type " ++ show tp)
+  pure (OvalVariable oid vvalue)
+
+localVariable :: Parser OvalVariable
+localVariable = lx $ element "local_variable" $ \mp -> do
+  oid <- variableId mp
+  cmt <- extractParameter "comment" mp
+  ignoreNested []
+  case cmt of
+    "kernel version in evr format" -> pure (OvalVariable oid KernelVersion)
+    _ -> fail ("Unsupported local variable " ++ show cmt)
 
 object :: Parser OvalObject
-object = lx (rpmObject <|> dpkgInfoObject <|> familyObject <|> unameObject <|> textFileContentObject <|> releaseCodenameObject)
+object = lx (rpmObject <|> dpkgInfoObject <|> familyObject <|> unameObject <|> textFileContentObject <|> variableObject <|> releaseCodenameObject)
 
 dpkgInfoObject :: Parser OvalObject
 dpkgInfoObject = element "dpkginfo_object" $ \mp -> do
@@ -280,6 +318,12 @@ dpkgInfoObject = element "dpkginfo_object" $ \mp -> do
           Just pname -> pure pname
       else pure txt
   pure (DpkgO oid nm)
+
+variableObject :: Parser OvalObject
+variableObject = element "variable_object" $ \mp -> do
+  oid <- objectId mp
+  nm <- lx $ element_ "var_ref" (mconcat <$> many characterdata)
+  pure (VariableObject oid (VariableId nm))
 
 textFileContentObject :: Parser OvalObject
 textFileContentObject = element "textfilecontent54_object" $ \mp -> do
@@ -317,17 +361,21 @@ unameObject = element "uname_object" $ fmap UnameO . objectId
 rpmObject :: Parser OvalObject
 rpmObject = element "rpminfo_object" $
   \mp ->
-    RpmO <$> (ObjectId <$> extractParameter "id" mp)
+    RpmO
+      <$> (ObjectId <$> extractParameter "id" mp)
       <*> lx (getTextFrom "name")
 
 test :: Parser OvalTest
-test = lx (rpmtest <|> dpkgInfoTest <|> familyTest <|> unameTest <|> unknownTest <|> unhandledTest)
+test = lx (rpmtest <|> dpkgInfoTest <|> familyTest <|> unameTest <|> unknownTest <|> variableTest <|> unhandledTest)
 
 withid :: (OTestId -> Parser a) -> HM.HashMap T.Text T.Text -> Parser a
 withid a mp = extractParameter "id" mp >>= a . OTestId
 
 objectId :: HM.HashMap T.Text T.Text -> Parser ObjectId
 objectId = fmap ObjectId . extractParameter "id"
+
+variableId :: HM.HashMap T.Text T.Text -> Parser VariableId
+variableId = fmap VariableId . extractParameter "id"
 
 objectRef :: Parser ObjectId
 objectRef = ObjectId <$> lx (element "object" (extractParameter "object_ref"))
@@ -343,6 +391,10 @@ rpmtest :: Parser OvalTest
 rpmtest = element "rpminfo_test" $ withid $ \rid ->
   RpmInfoT rid <$> objectRef <*> optional stateRef
 
+variableTest :: Parser OvalTest
+variableTest = element "variable_test" $ withid $ \rid ->
+  VariableTest rid <$> objectRef <*> stateRef
+
 unknownTest :: Parser OvalTest
 unknownTest = UnknownT <$ ignoreElement "unknown_test"
 
@@ -352,8 +404,8 @@ automaticResults =
     [ ("Is the host running Ubuntu trusty?", (`IVersionIs` [14, 4])),
       ("Is the host running Ubuntu xenial?", (`IVersionIs` [16, 4])),
       ("Is the host running Ubuntu bionic?", (`IVersionIs` [18, 4])),
-      ("Is the host running Ubuntu eoan?", (`IVersionIs` [19, 10])),
       ("Is the host running Ubuntu focal?", (`IVersionIs` [20, 4])),
+      ("Is the host running Ubuntu jammy?", (`IVersionIs` [22, 4])),
       ("Debian GNU/Linux 11 is installed", (`MVersionIs` 11)),
       ("Debian GNU/Linux 10 is installed", (`MVersionIs` 10)),
       ("Debian GNU/Linux 9 is installed", (`MVersionIs` 9)),
@@ -377,7 +429,8 @@ unhandledTest = anyElement $ \ename mp -> do
   sttid <- stateRef
   mcomment <- fromMaybe "???" <$> optional (extractParameter "comment" mp)
   details <-
-    TestDetails ename <$> extractParameter "check" mp
+    TestDetails ename
+      <$> extractParameter "check" mp
       <*> ( extractParameter "check_existence" mp
               <|> pure mcomment
           )
@@ -386,9 +439,9 @@ unhandledTest = anyElement $ \ename mp -> do
     Just r -> r rid
     Nothing
       | "kernel earlier than " `T.isPrefixOf` _tdComment details ->
-        TestAlways rid False (_tdComment details) -- TODO true or false??
+          TestAlways rid False (_tdComment details) -- TODO true or false??
       | "kernel-rt earlier than " `T.isPrefixOf` _tdComment details ->
-        TestAlways rid False (_tdComment details) -- TODO :/
+          TestAlways rid False (_tdComment details) -- TODO :/
       | otherwise -> Unhandled rid objid sttid details
 
 familyTest :: Parser OvalTest
@@ -405,11 +458,12 @@ dpkgInfoTest = element "dpkginfo_test" $ withid $ \rid ->
 extractOperation :: T.Text -> Parser Operation
 extractOperation "less than" = pure LessThan
 extractOperation "greater than or equal" = pure GreaterThanOrEqual
+extractOperation "greater than" = pure GreaterThan
 extractOperation "equals" = pure Equal
 extractOperation "pattern match" = pure PatternMatch
 extractOperation x = fail ("Unknown operator " <> T.unpack x)
 
-state :: Parser OvalState
+state :: Parser (OvalState VariableId)
 state = lx $ anyElement $ \ename mp -> do
   sid <- StateId <$> extractParameter "id" mp
   case snd (prefixedName ename) of
@@ -447,36 +501,44 @@ state = lx $ anyElement $ \ename mp -> do
           arch = element "arch" (extractop Arch)
       tests <- some (lx (evr <|> version <|> signatureKeyid <|> arch))
       return (OvalState sid (foldl1 AndStateOp tests))
+    "variable_state" -> do
+      lx $ element "value" $ \emap -> do
+        op <- extractParameter "operation" emap >>= extractOperation
+        tp <- extractParameter "datatype" emap
+        var <- extractParameter "var_ref" emap
+        var_check <- extractParameter "var_check" emap
+        unless (var_check == "at least one") (fail ("Unknown var check :" ++ show var_check))
+        pure (OvalState sid (VarStateOp (VariableId var) op tp))
     nm
       | "textfilecontent" `T.isPrefixOf` nm ->
-        OvalState sid . (`OvalStateOp` Equal) . MiscTest nm
-          <$> lx (getTextFrom "subexpression" <|> getTextFrom "text")
+          OvalState sid . (`OvalStateOp` Equal) . MiscTest nm
+            <$> lx (getTextFrom "subexpression" <|> getTextFrom "text")
     _ -> fail ("Unknown state type: " ++ T.unpack ename)
 
-extractop :: (T.Text -> TestType) -> HM.HashMap T.Text T.Text -> Parser OvalStateOp
+extractop :: (T.Text -> TestType) -> HM.HashMap T.Text T.Text -> Parser (OvalStateOp a)
 extractop testtype emap = do
   op <- extractParameter "operation" emap >>= extractOperation
   txt <- mconcat <$> many characterdata
   return $ OvalStateOp (testtype txt) op
 
-parsedoc :: Parser ([OvalDefinition], [OvalTest], [OvalObject], [OvalState])
+parsedoc :: Parser ([OvalDefinition], [OvalTest], [OvalObject], [OvalState VariableId], [OvalVariable])
 parsedoc = lx $ element_ "oval_definitions" $ do
   lx (ignoreElement "generator")
   defs <- catMaybes <$> lx (element_ "definitions" (many definition P.<?> "many defintion"))
   tsts <- lx (element_ "tests" (many test))
   objs <- lx (element_ "objects" (many object))
   stts <- lx (element_ "states" (many state))
-  void $ lx $ optional $ ignoreElement "variables" -- TODO, check what this is, this is for ubuntu xenial
-  return (defs, tsts, objs, stts)
+  variables <- optional $ lx (element_ "variables" (many variable))
+  return (defs, tsts, objs, stts, fromMaybe [] variables)
 
 parseOvalStream :: FilePath -> BSL.ByteString -> Either String ([OvalDefinition], HM.HashMap OTestId OFullTest)
 parseOvalStream filename l =
   case parseStream filename l (xml parsedoc <|> parsedoc) of
     Left rr -> Left rr
-    Right (d, t, p, s) -> (d,) . HM.fromList <$> mkTests t p s
+    Right (d, t, p, s, v) -> (d,) . HM.fromList <$> mkTests t p s v
 
-mkTests :: [OvalTest] -> [OvalObject] -> [OvalState] -> Either String [(OTestId, OFullTest)]
-mkTests tests objects states = catMaybes <$> mapM mkTest tests
+mkTests :: [OvalTest] -> [OvalObject] -> [OvalState VariableId] -> [OvalVariable] -> Either String [(OTestId, OFullTest)]
+mkTests tests objects states variables = catMaybes <$> mapM mkTest tests
   where
     getFromMap t mp = case HM.lookup t mp of
       Just x -> Right x
@@ -499,13 +561,14 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
       Unhandled _ _ _ td
         | Just mname <- T.stripPrefix "Module " (_tdCE td) >>= T.stripSuffix " is enabled" -> Nothing <$ traceM ("Unhandled RedHat module check for " ++ show mname)
         | Just mname <- T.stripPrefix "kernel version " (_tdCE td) >>= T.stripSuffix " is set to boot up on next boot" -> Nothing <$ traceM ("Unhandled RedHat next boot check for " ++ show mname)
+      VariableTest testid objectid stateid -> go testid objectid stateid
       Unhandled {} -> Left ("Unknown test " ++ show t)
       where
         reVersion v = "^" <> T.pack (show v) <> "(\\.[.0-9]+)?$"
         go testid objectid stateid = do
           obj <- getFromMap objectid omap
           top <- getFromMap stateid smap
-          when (T.null obj) (traceShowM top)
+          when (T.null obj) (traceM ("Object id " ++ show objectid ++ " not found, state is " ++ show top))
           pure $ Just (testid, OFullTest obj top)
         mgo testid objectid mstateid = do
           obj <- getFromMap objectid omap
@@ -522,8 +585,24 @@ mkTests tests objects states = catMaybes <$> mapM mkTest tests
       UnameO oid -> (oid, "")
       ReleaseCodenameO oid -> (oid, "")
       FileContent oid _ _ _ -> (oid, "") -- TODO :(
-    smap :: HM.HashMap StateId OvalStateOp
-    smap = HM.fromList $ map (\(OvalState sid top) -> (sid, top)) states
+      VariableObject oid vid -> case HM.lookup vid vmap of
+        Just (EvrString vl) -> (oid, vl)
+        Just (Strings sl) -> (oid, T.pack (show sl))
+        Just KernelVersion -> (oid, "KERNEL_VERSION")
+        Nothing -> error ("Missing variable " ++ show vid)
+    smap :: HM.HashMap StateId (OvalStateOp T.Text)
+    smap = HM.fromList $ map convertStates states
+    vmap :: HM.HashMap VariableId OvalVariableValue
+    vmap = HM.fromList $ map (\(OvalVariable vid v) -> (vid, v)) variables
+
+    convertStates :: OvalState VariableId -> (StateId, OvalStateOp T.Text)
+    convertStates (OvalState sid vop) = (sid, fmap convert vop)
+      where
+        convert vid = case HM.lookup vid vmap of
+          Nothing -> error ("Missing variable " ++ show vid)
+          Just (EvrString vl) -> vl
+          Just (Strings sl) -> T.pack (show sl)
+          Just KernelVersion -> "KERNEL_VERSION"
 
 parseOvalFile :: FilePath -> IO (Either String ([OvalDefinition], HM.HashMap OTestId OFullTest))
 parseOvalFile fp = parseOvalStream fp <$> BSL.readFile fp

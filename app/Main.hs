@@ -14,7 +14,6 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Csv (encode)
 import qualified Data.Foldable as F
 import Data.List
-import Data.Microsoft (loadKBDays)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Options.Applicative
@@ -84,21 +83,20 @@ main = do
   Options secs dmode runmode files <- execParser commandParser
   xdiag <- mkOnce (loadPatchDiag "sources/patchdiag.xref")
   ov <- ovalOnce "serialized"
-  okbd <- mkOnce (loadKBDays "serialized/BulletinSearch.serialized")
   case runmode of
     CSV -> do
-      res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) files
+      res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov) files
       BSL.putStrLn (encode (map toRecord (F.toList res)))
     Patches -> do
-      res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov okbd) files
+      res <- mconcat <$> mapM (analyzeFile AuditTarGz xdiag ov) files
       let missings = res ^.. traverse . _Vulnerability . aside _OutdatedPackage
           toPatchRecord (sev, OP titre installed patched pub _) =
             [show pub, show sev, T.unpack titre, T.unpack installed, T.unpack patched]
       BSL.putStrLn (encode (map toPatchRecord (F.toList missings)))
-    Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov okbd >=> showReport dmode secs) files
+    Standard -> mapM_ (analyzeFile AuditTarGz xdiag ov >=> showReport dmode secs) files
     ShowD -> forM_ files $ \p -> do
       putStrLn ("Parsing " ++ p)
-      analyzeFile AuditTarGz xdiag ov okbd p >>= mapM_ print
+      analyzeFile AuditTarGz xdiag ov p >>= mapM_ print
 
 toRecord :: Vulnerability -> [String]
 toRecord v =

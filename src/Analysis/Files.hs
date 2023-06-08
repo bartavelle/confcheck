@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE Strict #-}
 {-# LANGUAGE TupleSections #-}
 
 module Analysis.Files
@@ -26,28 +28,27 @@ import Analysis.Types.Sudo
 import Analysis.Types.UnixUsers
 import Analysis.Types.Vulnerability
 import ByteString.Parser.Fast
-import qualified ByteString.Parser.Fast as F
+import ByteString.Parser.Fast qualified as F
 import Control.Dependency
 import Control.Lens
 import Control.Monad
 import Control.Parallel.Strategies
-import qualified Data.ByteString as BSB
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.CompactMap as CM
+import Data.ByteString qualified as BSB
+import Data.ByteString.Char8 qualified as BS
+import Data.CompactMap qualified as CM
 import Data.Condition
 import Data.Either
-import qualified Data.Foldable as F
-import qualified Data.HashMap.Strict as HM
+import Data.Foldable qualified as F
+import Data.HashMap.Strict qualified as HM
 import Data.List
-import qualified Data.Map.Strict as M
-import qualified Data.Maybe.Strict as S
+import Data.Map.Strict qualified as M
+import Data.Maybe.Strict qualified as S
 import Data.Parsers.Atto (englishMonthToInt)
 import Data.Sequence (Seq)
 import Data.Sequence.Lens
 import Data.Text (Text)
-import qualified Data.Text.Encoding as T
-import qualified Data.Thyme as Y
-import qualified Data.Thyme.Time.Core as Y
+import Data.Text.Encoding qualified as T
+import Data.Thyme qualified as Y
 import Data.Word (Word8)
 import System.FilePath
 
@@ -70,7 +71,7 @@ char2ft x = case x of
 
 parseTimestamp :: BS.ByteString -> Either F.ParseError Y.UTCTime
 parseTimestamp txt
-  | "%++" `BS.isPrefixOf` txt = Right $ Y.mkUTCTime (Y.fromGregorian 2016 03 12) (Y.fromSeconds (0 :: Int))
+  | "%++" `BS.isPrefixOf` txt = Right $ Y.UTCTime (Y.fromGregorian 2016 03 12) (Y.fromSeconds (0 :: Int))
   | otherwise = F.parseOnly F.timestamp txt
 
 parseOnlyString :: Parser a -> BSB.ByteString -> Either String a
@@ -86,16 +87,16 @@ lineNG' t = case BS.words t of
           (a, ["->"]) -> (BS.unwords a, Nothing)
           (a, b) -> (BS.unwords a, Just (BS.unwords (tail b)))
         parseTS x = either (\rr -> Left ("Can't parse date: " ++ show x ++ ": " ++ show rr)) Right $ parseTimestamp x
-    !dt1' <- parseTS dt1
-    !dt2' <- parseTS dt2
-    !dt3' <- parseTS dt3
-    !ft'' <- getfiletype ft
-    !prm' <- parseOnlyString F.onum prms
+    dt1' <- parseTS dt1
+    dt2' <- parseTS dt2
+    dt3' <- parseTS dt3
+    ft'' <- getfiletype ft
+    prm' <- parseOnlyString F.onum prms
     let ft' = case (ft'', target) of
           (TFile, Just _) -> TLink
           _ -> ft''
-    return
-      $! UnixFileGen
+    return $
+      UnixFileGen
         (getInt inode)
         (getInt hardlinks)
         dt1'
@@ -127,11 +128,11 @@ parseOldPerms = do
              in return (s, p 4 (r /= '-') + p 2 (w /= '-') + p 1 ox)
           _ -> error "can't happen in parseOldPerms"
       p x c = if c then x else 0
-  (!suid, !u) <- parseOldPerm
-  (!guid, !g) <- parseOldPerm
-  (!stik, !o) <- parseOldPerm
-  let !spec = p 4 suid + p 2 guid + p 1 stik
-  return $! FPerms $! spec * 8 * 8 * 8 + u * 8 * 8 + g * 8 + o
+  (suid, u) <- parseOldPerm
+  (guid, g) <- parseOldPerm
+  (stik, o) <- parseOldPerm
+  let spec = p 4 suid + p 2 guid + p 1 stik
+  return $ FPerms $ spec * 8 * 8 * 8 + u * 8 * 8 + g * 8 + o
 
 getint :: Integral n => BS.ByteString -> Either String n
 getint t = BSB.foldl' parseDecimal (Right 0) t
@@ -145,8 +146,8 @@ getfiletype :: BS.ByteString -> Either String FileType
 getfiletype y
   | BS.null y = Left "Empty file type !?!"
   | otherwise = case char2ft (BS.head y) of
-    Just x -> Right x
-    Nothing -> Left ("Invalid file type " <> show y)
+      Just x -> Right x
+      Nothing -> Left ("Invalid file type " <> show y)
 
 -- | Un parser "à la main", pourri à lire, mais 3x plus rapide que le
 -- précédent ..
@@ -166,7 +167,7 @@ lineOld t = case BS.words t of
           [h, m] -> (,,) <$> getint h <*> getint m <*> pure 2014 -- TODO make this year dynamic
           [y] -> (0,0,) <$> getint y
           _ -> Left "Too many : in year field"
-        mkdate mo d (h, mi, y) = Y.UTCTime (Y.YearMonthDay y mo d ^. from Y.gregorian) (Y.fromSeconds (h * 3600 + mi * 60 :: Int)) ^. from Y.utcTime
+        mkdate mo d (h, mi, y) = Y.UTCView (Y.YearMonthDay y mo d ^. from Y.gregorian) (Y.fromSeconds (h * 3600 + mi * 60 :: Int)) ^. from Y.utcTime
         (pt, tgt) = case break (== "->") ptt of
           (a, b) ->
             (Right (BS.unwords a),) $
@@ -216,15 +217,17 @@ analyzeFS vm allvulns =
            ]
     sudocond = Pure (\f -> worldWritable f || not (ownedBy "root" f))
     mkvsudo sev f =
-      Vulnerability sev $ VFile $
-        if not (ownedBy "root" f)
-          then ShouldBeOwnedBy "root" "sudo root" f
-          else ShouldNotBeWritable "sudo root" f
+      Vulnerability sev $
+        VFile $
+          if not (ownedBy "root" f)
+            then ShouldBeOwnedBy "root" "sudo root" f
+            else ShouldNotBeWritable "sudo root" f
     mkvpsudo sev c f =
-      Vulnerability sev $ VFile $
-        if not (ownedBy "root" f)
-          then ShouldBeOwnedBy "root" (tfp c <> " can be run as root with sudo") f
-          else ShouldNotBeWritable (tfp c <> " can be run as root with sudo") f
+      Vulnerability sev $
+        VFile $
+          if not (ownedBy "root" f)
+            then ShouldBeOwnedBy "root" (tfp c <> " can be run as root with sudo") f
+            else ShouldNotBeWritable (tfp c <> " can be run as root with sudo") f
     userlist = vm ^.. ix GAuthUnix . folded . _ConfigInformation . _ConfPass
     userhomes = map (T.encodeUtf8 . view pwdHome) userlist
     usermap = HM.fromList $ map (mkpair pwdUid pwdUsername) userlist
@@ -283,5 +286,5 @@ completeLink cwd lnk
   | BS.null lnk = cwd
   | BS.head lnk == '/' = lnk
   | otherwise = case getParent cwd of
-    S.Just p -> p <> "/" <> lnk
-    S.Nothing -> "/" <> lnk
+      S.Just p -> p <> "/" <> lnk
+      S.Nothing -> "/" <> lnk
