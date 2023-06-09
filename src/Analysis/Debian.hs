@@ -82,7 +82,7 @@ postDebAnalysis = postOvalAnalysis mkdebmap runOvalAnalyze
 
 -- | parses the content of dpkg-status
 parseDpkgStatus :: Text -> [SoftwarePackage]
-parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMultilines . T.lines
+parseDpkgStatus = mapMaybe (mkPackage . mkmaps) . splitWhen T.null . regroupMultilines . map (T.dropWhileEnd (== '\r')) . T.lines
   where
     mkPackage m = do
       nm <- m ^? ix "Package"
