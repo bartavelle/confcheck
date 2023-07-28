@@ -150,7 +150,7 @@ data OvalState t = OvalState StateId (OvalStateOp t)
 data OvalVariable = OvalVariable VariableId OvalVariableValue
   deriving (Show)
 
-data OvalVariableValue = Strings [T.Text] | EvrString T.Text | KernelVersion
+data OvalVariableValue = Strings [T.Text] | EvrString T.Text | KernelVersion | Various T.Text
   deriving (Show)
 
 data OvalStateOp t
@@ -277,10 +277,10 @@ definition = lx $ element "definition" $ \args ->
       return $ Just $ OvalDefinition defid title refs desc crit sev (P.sourceLine p) res
 
 variable :: Parser OvalVariable
-variable = constantVariable <|> localVariable
+variable = lx (constantVariable <|> localVariable)
 
 constantVariable :: Parser OvalVariable
-constantVariable = lx $ element "constant_variable" $ \mp -> do
+constantVariable = element "constant_variable" $ \mp -> do
   oid <- variableId mp
   tp <- extractParameter "datatype" mp
   let getvalue = lx (element_ "value" (mconcat <$> many characterdata))
@@ -291,13 +291,14 @@ constantVariable = lx $ element "constant_variable" $ \mp -> do
   pure (OvalVariable oid vvalue)
 
 localVariable :: Parser OvalVariable
-localVariable = lx $ element "local_variable" $ \mp -> do
+localVariable = element "local_variable" $ \mp -> do
   oid <- variableId mp
   cmt <- extractParameter "comment" mp
   ignoreNested []
   case cmt of
     "kernel version in evr format" -> pure (OvalVariable oid KernelVersion)
-    _ -> fail ("Unsupported local variable " ++ show cmt)
+    "Get saved_entry in /boot/grub2/grubenv" -> pure (OvalVariable oid (Various "grubenv saved_entry + 1"))
+    _ -> error ("Unsupported local variable " ++ show cmt)
 
 object :: Parser OvalObject
 object = lx (rpmObject <|> dpkgInfoObject <|> familyObject <|> unameObject <|> textFileContentObject <|> variableObject <|> releaseCodenameObject)
@@ -392,8 +393,18 @@ rpmtest = element "rpminfo_test" $ withid $ \rid ->
   RpmInfoT rid <$> objectRef <*> optional stateRef
 
 variableTest :: Parser OvalTest
-variableTest = element "variable_test" $ withid $ \rid ->
-  VariableTest rid <$> objectRef <*> stateRef
+variableTest = element "variable_test" $ \mp -> do
+  rid <- OTestId <$> extractParameter "id" mp
+  oref <- objectRef
+  mstateRef <- optional stateRef
+  case mstateRef of
+    Just sref -> pure (VariableTest rid oref sref)
+    Nothing -> do
+      mcmt <- optional (extractParameter "comment" mp)
+      case mcmt of
+        Just "kernel version comparison" ->
+          pure (TestAlways rid True "kernel version comparison")
+        _ -> error ("unknown comment " ++ show mcmt)
 
 unknownTest :: Parser OvalTest
 unknownTest = UnknownT <$ ignoreElement "unknown_test"
@@ -406,6 +417,7 @@ automaticResults =
       ("Is the host running Ubuntu bionic?", (`IVersionIs` [18, 4])),
       ("Is the host running Ubuntu focal?", (`IVersionIs` [20, 4])),
       ("Is the host running Ubuntu jammy?", (`IVersionIs` [22, 4])),
+      ("Debian GNU/Linux 12 is installed", (`MVersionIs` 12)),
       ("Debian GNU/Linux 11 is installed", (`MVersionIs` 11)),
       ("Debian GNU/Linux 10 is installed", (`MVersionIs` 10)),
       ("Debian GNU/Linux 9 is installed", (`MVersionIs` 9)),
@@ -505,10 +517,17 @@ state = lx $ anyElement $ \ename mp -> do
       lx $ element "value" $ \emap -> do
         op <- extractParameter "operation" emap >>= extractOperation
         tp <- extractParameter "datatype" emap
-        var <- extractParameter "var_ref" emap
-        var_check <- extractParameter "var_check" emap
-        unless (var_check == "at least one") (fail ("Unknown var check :" ++ show var_check))
-        pure (OvalState sid (VarStateOp (VariableId var) op tp))
+        mvar <- optional (extractParameter "var_ref" emap)
+        case mvar of
+          Just var -> do
+            var_check <- extractParameter "var_check" emap
+            unless (var_check == "at least one") (fail ("Unknown var check :" ++ show var_check))
+            pure (OvalState sid (VarStateOp (VariableId var) op tp))
+          Nothing -> case tp of
+            "debian_evr_string" -> do
+              v <- mconcat <$> some characterdata
+              pure (OvalState sid (OvalStateOp (Version v) op))
+            _ -> error ("unsupported variable state with no variable " ++ show tp)
     nm
       | "textfilecontent" `T.isPrefixOf` nm ->
           OvalState sid . (`OvalStateOp` Equal) . MiscTest nm
@@ -589,6 +608,7 @@ mkTests tests objects states variables = catMaybes <$> mapM mkTest tests
         Just (EvrString vl) -> (oid, vl)
         Just (Strings sl) -> (oid, T.pack (show sl))
         Just KernelVersion -> (oid, "KERNEL_VERSION")
+        Just (Various x) -> (oid, x)
         Nothing -> error ("Missing variable " ++ show vid)
     smap :: HM.HashMap StateId (OvalStateOp T.Text)
     smap = HM.fromList $ map convertStates states
@@ -603,6 +623,7 @@ mkTests tests objects states variables = catMaybes <$> mapM mkTest tests
           Just (EvrString vl) -> vl
           Just (Strings sl) -> T.pack (show sl)
           Just KernelVersion -> "KERNEL_VERSION"
+          Just (Various x) -> x
 
 parseOvalFile :: FilePath -> IO (Either String ([OvalDefinition], HM.HashMap OTestId OFullTest))
 parseOvalFile fp = parseOvalStream fp <$> BSL.readFile fp

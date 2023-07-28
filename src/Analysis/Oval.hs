@@ -194,7 +194,10 @@ ovalOnce ::
   IO (UnixVersion -> Maybe (Once OvalContent))
 ovalOnce serdir = do
   let ld f = mkOnce . loadOvalSerialized $ serdir ++ "/" ++ f
-  rhoval <- ld "com.redhat.rhsa-all.xml"
+  rhoval6 <- ld "rhel-6.oval.xml"
+  rhoval7 <- ld "rhel-7.oval.xml"
+  rhoval8 <- ld "rhel-8.oval.xml"
+  rhoval9 <- ld "rhel-9.oval.xml"
   s11oval <- ld "suse.linux.enterprise.server.11.xml"
   s12oval <- ld "suse.linux.enterprise.server.12.xml"
   s15oval <- ld "suse.linux.enterprise.server.15.xml"
@@ -213,13 +216,23 @@ ovalOnce serdir = do
   deb9 <- ld "oval-definitions-stretch.xml"
   deb10 <- ld "oval-definitions-buster.xml"
   deb11 <- ld "oval-definitions-bullseye.xml"
+  deb12 <- ld "oval-definitions-bookworm.xml"
   let ov v = case v of
         UnixVersion SuSE (11 : _) -> Just s11oval
         UnixVersion SuSE (12 : _) -> Just s12oval
         UnixVersion SuSE (15 : _) -> Just s15oval
-        UnixVersion RedHatLinux _ -> Just rhoval
-        UnixVersion RHEL _ -> Just rhoval
-        UnixVersion CentOS _ -> Just rhoval
+        UnixVersion RedHatLinux (6 : _) -> Just rhoval6
+        UnixVersion RHEL (6 : _) -> Just rhoval6
+        UnixVersion CentOS (6 : _) -> Just rhoval6
+        UnixVersion RedHatLinux (7 : _) -> Just rhoval7
+        UnixVersion RHEL (7 : _) -> Just rhoval7
+        UnixVersion CentOS (7 : _) -> Just rhoval7
+        UnixVersion RedHatLinux (8 : _) -> Just rhoval8
+        UnixVersion RHEL (8 : _) -> Just rhoval8
+        UnixVersion CentOS (8 : _) -> Just rhoval8
+        UnixVersion RedHatLinux (9 : _) -> Just rhoval9
+        UnixVersion RHEL (9 : _) -> Just rhoval9
+        UnixVersion CentOS (9 : _) -> Just rhoval9
         UnixVersion OpenSuSE [12, 2] -> Just os122oval
         UnixVersion OpenSuSE [12, 3] -> Just os123oval
         UnixVersion OpenSuSE [13, 2] -> Just os132oval
@@ -233,6 +246,7 @@ ovalOnce serdir = do
         UnixVersion Debian (9 : _) -> Just deb9
         UnixVersion Debian (10 : _) -> Just deb10
         UnixVersion Debian (11 : _) -> Just deb11
+        UnixVersion Debian (12 : _) -> Just deb12
         UnixVersion OpenSUSELeap [15, 0] -> Just osl150oval
         UnixVersion OpenSUSELeap [15, 1] -> Just osl151oval
         _ -> trace ("Unknown os " ++ show v) Nothing
