@@ -1,3 +1,10 @@
+confcheck (0.4) unstable; urgency=medium
+
+  * Rules update
+  * Updated support for Ubuntu xml format
+
+ -- Bartavelle <bartavelle@gmail.com>  Thu, 28 Dec 2023 09:51:17 +0100
+
 confcheck (0.3) unstable; urgency=medium
 
   * Rules update
@@ -5,7 +12,7 @@ confcheck (0.3) unstable; urgency=medium
   * Dropped Windows support
   * Updated support for Ubuntu xml format
 
- -- Bartavelle <bartavelle@gmail.com>  Thu, 08 Jun 2023 16:10:44 +0200
+ -- Bartavelle <simon.marechal@synacktiv.com>  Thu, 08 Jun 2023 16:10:44 +0200
 
 confcheck (0.2) unstable; urgency=medium
 
