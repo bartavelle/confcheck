@@ -247,6 +247,7 @@ definition = lx $ element "definition" $ \args ->
                   "bug",
                   "ref",
                   "assigned_to",
+                  "discoverd_by",
                   "public_date_at_usn",
                   "discovered_by",
                   "crd"
@@ -297,6 +298,7 @@ localVariable = element "local_variable" $ \mp -> do
   ignoreNested []
   case cmt of
     "kernel version in evr format" -> pure (OvalVariable oid KernelVersion)
+    "Kernel version in evr format" -> pure (OvalVariable oid KernelVersion)
     "Get saved_entry in /boot/grub2/grubenv" -> pure (OvalVariable oid (Various "grubenv saved_entry + 1"))
     _ -> error ("Unsupported local variable " ++ show cmt)
 
